@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!--
+  login.html  —  관리자 로그인 화면
+
+  메인 화면의 "🔒 관리자" 버튼을 누르면 여기로 온다.
+  비밀번호가 맞아야만 admin.html(진행자 콘솔)로 넘어간다.
+
+  admin.html 에 직접 주소를 쳐서 들어가더라도,
+  로그인 기록이 없으면 js/app.js 가 이 화면으로 되돌려 보낸다.
+-->
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>관리자 로그인 · 골든벨</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body data-page="login">
+  <div class="로그인바탕">
+    <section class="로그인카드">
+
+      <!-- ../ 는 "한 단계 위 폴더". 이 파일은 html 폴더 안에 있으므로
+           메인 화면으로 가려면 한 단계 올라가야 한다. -->
+      <a class="로고" href="../index.html">
+        <span class="로고표">골든<br>벨</span>
+        <span class="로고글">
+          <strong>2026 한가위 골든벨</strong>
+          <small>GOLDEN BELL SURVIVAL</small>
+        </span>
+      </a>
+
+      <div>
+        <p class="눈썹">SECURE CONSOLE</p>
+        <h1>진행자 로그인</h1>
+        <p class="안내">등록된 진행자만 콘솔에 들어갈 수 있습니다.</p>
+      </div>
+
+      <div class="입력묶음">
+        <label for="아이디">진행자 아이디</label>
+        <input id="아이디" autocomplete="username" placeholder="admin">
+
+        <label for="비밀번호">비밀번호</label>
+        <!-- type="password" 로 하면 입력한 글자가 점으로 가려진다 -->
+        <input type="password" id="비밀번호" autocomplete="current-password"
+               placeholder="비밀번호를 입력하세요">
+
+        <button class="주요버튼" id="로그인버튼">관리자 로그인</button>
+
+        <!-- 오류 메시지가 표시될 자리. 비어 있으면 상자도 숨겨진다. -->
+        <p class="오류" id="로그인알림"></p>
+
+        <p class="안내" style="font-size:13px">
+          계정은 서버에 저장됩니다. 새로 만들려면 <code>npm run create-admin</code> 을 실행하세요.
+        </p>
+      </div>
+
+    </section>
+  </div>
+
+  <!-- 자바스크립트는 화면이 다 만들어진 뒤에 읽혀야 하므로 맨 아래에 둔다.
+       store.js 를 먼저, app.js 를 나중에 불러야 한다.
+       app.js 가 store.js 안의 함수를 쓰기 때문이다. -->
+  <script src="../js/store.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

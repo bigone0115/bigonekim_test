@@ -1,0 +1,16 @@
+{
+  "name": "goldenbell-web2",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.0.0" },
+  "scripts": {
+    "start": "node --env-file=.env server/server.js",
+    "migrate": "node --env-file=.env scripts/migrate.mjs",
+    "create-admin": "node --env-file=.env scripts/create-admin.mjs"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "pg": "^8.13.1"
+  }
+}

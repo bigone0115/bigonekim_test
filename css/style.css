@@ -1,0 +1,815 @@
+/* ============================================================
+   style.css  —  모든 화면이 함께 쓰는 디자인 파일
+   ============================================================
+   원본 프로젝트(goldenbell-web/app/globals.css)의 디자인을 그대로 옮겼다.
+   크림색 종이 바탕 + 깊은 초록 + 금색 포인트의 한가위 분위기다.
+
+   CSS는 "무엇을 / 어떻게 꾸밀지" 두 부분으로 쓴다.
+
+       h1 { color: red; }
+       └┬┘  └────┬────┘
+      무엇을     어떻게
+
+   .이름  → class="이름" 인 요소를 고른다
+   #이름  → id="이름"    인 요소를 고른다
+   ============================================================ */
+
+
+/* ------------------------------------------------------------
+   0) 색깔 이름 미리 정해두기
+   ------------------------------------------------------------
+   --이름: 값;  형태로 만들어두면 아래에서 var(--이름) 으로 꺼내 쓴다.
+   색을 바꾸고 싶으면 여기 한 줄만 고치면 전체가 바뀐다.
+   ------------------------------------------------------------ */
+:root {
+  --먹색:     #17332e;   /* 기본 글자색 (아주 짙은 초록빛 검정) */
+  --흐린색:   #667c76;   /* 설명용 회색 글자 */
+  --초록:     #176b56;   /* 주요 버튼, 강조 */
+  --진초록:   #103f35;   /* 프로젝터 배경, 타이머 */
+  --연초록:   #dcece5;   /* 선택된 보기, 꼬리표 배경 */
+  --금색:     #e0a936;   /* 로고와 포인트 */
+  --크림:     #f7f3e8;   /* 전체 배경 */
+  --종이:     #fffef9;   /* 카드 배경 */
+  --선:       #dce4df;   /* 테두리 */
+  --빨강:     #ae3f3f;   /* 오류, 탈락 */
+  --그림자:   0 20px 70px rgba(30, 61, 52, 0.12);
+}
+
+
+/* ------------------------------------------------------------
+   1) 기본값 정리
+   ------------------------------------------------------------ */
+
+/* * 는 "모든 요소"라는 뜻이다.
+   box-sizing: border-box 는 테두리와 여백을 크기 안에 포함시킨다.
+   이걸 안 하면 너비 100% 짜리 상자가 화면 밖으로 삐져나간다. */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--크림);
+  color: var(--먹색);
+  font-family: Arial, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  -webkit-font-smoothing: antialiased;   /* 글자를 매끄럽게 */
+}
+
+a {
+  color: inherit;            /* 링크 색을 부모와 같게 (기본 파란색 없애기) */
+  text-decoration: none;     /* 밑줄 없애기 */
+}
+
+button, input, select {
+  font: inherit;             /* 버튼·입력칸도 본문과 같은 글꼴로 */
+}
+
+button {
+  border: 0;
+  cursor: pointer;           /* 마우스를 올리면 손가락 모양 */
+}
+
+/* disabled 는 "누를 수 없는 상태"를 뜻하는 HTML 속성이다. */
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+
+/* ------------------------------------------------------------
+   2) 로고
+   ------------------------------------------------------------
+   금색 종 모양 원 + 오른쪽에 제목/부제를 세로로 쌓은 형태다.
+   ------------------------------------------------------------ */
+
+.로고 {
+  align-items: center;
+  display: inline-flex;      /* 자식들을 가로로 나란히 */
+  gap: 12px;                 /* 자식들 사이 간격 */
+}
+
+/* 금색 원. 완전한 동그라미가 아니라 살짝 찌그러뜨리고 기울여
+   손으로 그린 종처럼 보이게 했다. */
+.로고표 {
+  align-items: center;
+  background: var(--금색);
+  border-radius: 50% 50% 46% 54%;    /* 네 모서리를 각각 다르게 */
+  color: var(--진초록);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 900;
+  height: 44px;
+  width: 44px;
+  justify-content: center;
+  letter-spacing: -1px;
+  transform: rotate(-5deg);          /* 왼쪽으로 5도 기울이기 */
+}
+
+.로고글 {
+  display: grid;
+  gap: 2px;
+}
+
+.로고글 strong {
+  font-size: 16px;
+  letter-spacing: -0.04em;
+}
+
+.로고글 small {
+  color: var(--흐린색);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+
+/* ------------------------------------------------------------
+   3) 공통 부품
+   ------------------------------------------------------------ */
+
+/* 섹션 위에 붙는 작은 초록 대문자 문구 */
+.눈썹 {
+  color: var(--초록);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  margin: 0 0 12px;
+  text-transform: uppercase;
+}
+
+/* 알약 모양 표시 (현재 단계 등) */
+.표식 {
+  background: var(--진초록);
+  border-radius: 999px;      /* 아주 큰 값 = 완전히 둥근 모서리 */
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 9px 14px;
+  white-space: nowrap;       /* 글자가 두 줄로 쪼개지지 않게 */
+}
+
+/* 연한 초록 꼬리표 (참가자 / 관객 같은 분류) */
+.꼬리표 {
+  background: var(--연초록);
+  border-radius: 999px;
+  color: var(--초록);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 10px;
+}
+
+/* 머리글: 왼쪽 로고, 오른쪽 나머지 */
+.머리글 {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;    /* 양 끝으로 밀어내기 */
+}
+
+/* 머리글 오른쪽에 여러 개를 나란히 붙일 때 쓰는 묶음 */
+.머리글오른쪽 {
+  align-items: center;
+  display: flex;
+  gap: 9px;
+}
+
+/* 버튼 3종 */
+.주요버튼, .보조버튼, .위험버튼 {
+  border-radius: 14px;
+  font-weight: 800;
+  min-height: 54px;
+  padding: 0 20px;
+}
+
+.주요버튼 { background: var(--초록);  color: white; }
+.보조버튼 { background: #e8efec;      color: var(--진초록); }
+.위험버튼 { background: #f3dddd;      color: var(--빨강); }
+
+/* 입력칸과 선택칸 */
+input, select {
+  background: #f7f9f6;
+  border: 1px solid var(--선);
+  border-radius: 13px;
+  color: var(--먹색);
+  min-height: 52px;
+  outline: none;
+  padding: 0 14px;
+  width: 100%;
+}
+
+/* :focus 는 "지금 이 칸에 커서가 있을 때"를 뜻한다. */
+input:focus, select:focus {
+  border-color: var(--초록);
+  box-shadow: 0 0 0 4px rgba(23, 107, 86, 0.1);   /* 초록 테두리 번짐 */
+}
+
+label {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+/* 안내 / 오류 / 성공 문구 */
+.안내 { color: var(--흐린색); font-size: 14px; line-height: 1.65; }
+
+.오류 {
+  background: #fff0f0;
+  border-radius: 10px;
+  color: var(--빨강);
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 10px 12px;
+}
+
+/* :empty 는 "안이 비어 있을 때". 오류 문구가 없으면 빈 상자도 숨긴다. */
+.오류:empty { display: none; }
+
+.성공 { color: var(--초록); font-size: 13px; font-weight: 800; }
+
+
+/* ------------------------------------------------------------
+   4) 홈 화면
+   ------------------------------------------------------------ */
+
+.홈 {
+  margin: 0 auto;            /* 좌우 auto = 가운데 정렬 */
+  max-width: 1180px;
+  min-height: 100vh;         /* vh = 화면 높이의 1% */
+  padding: 30px 28px 70px;   /* 위 / 좌우 / 아래 */
+}
+
+.홈소개 {
+  padding: 70px 0 44px;
+}
+
+/* clamp(최소, 기준, 최대) = 화면이 커지면 같이 커지되 한계를 둔다.
+   7vw 는 화면 너비의 7%. 휴대폰에서는 42px, 큰 화면에서는 82px. */
+.홈소개 h1 {
+  font-size: clamp(38px, 7vw, 82px);
+  letter-spacing: -0.07em;
+  line-height: 0.98;
+  margin: 0;
+}
+
+.홈소개 p {
+  color: var(--흐린색);
+  font-size: 17px;
+  line-height: 1.7;
+  max-width: 540px;
+}
+
+/* grid 는 바둑판처럼 칸을 나누는 배치 방식이다.
+   auto-fit + minmax(260px, 1fr) =
+   "한 칸을 최소 260px 로 하되, 들어갈 수 있는 만큼 자동으로 나눠라"
+   덕분에 좁은 화면에서는 저절로 한 줄에 하나씩 쌓인다. */
+.바로가기 {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.바로가기카드 {
+  background: rgba(255, 254, 249, 0.8);
+  border: 1px solid var(--선);
+  border-radius: 22px;
+  display: flex;
+  flex-direction: column;            /* 자식들을 세로로 쌓기 */
+  justify-content: space-between;
+  min-height: 260px;
+  padding: 22px;
+  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+/* :hover 는 "마우스를 올렸을 때". 살짝 떠오르게 만든다. */
+.바로가기카드:hover {
+  border-color: var(--초록);
+  box-shadow: var(--그림자);
+  transform: translateY(-4px);       /* 위로 4px 이동 */
+}
+
+.카드머리 {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.카드번호 { color: #a6b5b0; font-size: 13px; font-weight: 800; }
+
+.바로가기카드 h2 {
+  font-size: 24px;
+  letter-spacing: -0.05em;
+  margin: 0 0 10px;
+}
+
+.바로가기카드 p {
+  color: var(--흐린색);
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.화살표 {
+  align-self: flex-end;              /* 나 혼자만 오른쪽 끝으로 */
+  color: var(--초록);
+  font-size: 26px;
+}
+
+
+/* ------------------------------------------------------------
+   5) 휴대폰 화면 (참가 등록 / 게임)
+   ------------------------------------------------------------ */
+
+.모바일 {
+  display: flex;
+  flex-direction: column;
+  margin: 0 auto;
+  max-width: 520px;
+  min-height: 100vh;
+  overflow: hidden;                  /* 아래 장식 원이 삐져나가지 않게 */
+  padding: 20px;
+  position: relative;
+}
+
+/* ::before 는 진짜 요소가 아니라 CSS가 만들어내는 장식이다.
+   오른쪽 위에 연초록 원을 깔아 밋밋함을 덜었다. */
+.모바일::before {
+  background: var(--연초록);
+  border-radius: 50%;
+  content: "";
+  filter: blur(2px);
+  height: 360px;
+  width: 360px;
+  position: absolute;
+  right: -230px;
+  top: 70px;
+}
+
+/* 장식 원보다 내용이 위에 오도록 z-index(쌓임 순서)를 올린다. */
+.모바일 > * { position: relative; z-index: 1; }
+
+.카드 {
+  background: var(--종이);
+  border: 1px solid rgba(23, 107, 86, 0.12);
+  border-radius: 26px;
+  box-shadow: var(--그림자);
+  margin-top: 18px;
+  padding: 28px 24px;
+}
+
+.카드 h1 {
+  font-size: clamp(30px, 9vw, 44px);
+  letter-spacing: -0.07em;
+  line-height: 1.05;
+  margin: 0 0 8px;
+}
+
+.카드 h2 {
+  font-size: 22px;
+  letter-spacing: -0.05em;
+  margin: 0 0 8px;
+}
+
+/* 입력칸들 사이 간격 */
+.입력묶음 { display: grid; gap: 10px; }
+.입력묶음 .주요버튼 { margin-top: 6px; width: 100%; }
+
+
+/* ------------------------------------------------------------
+   6) 문제 / 답안
+   ------------------------------------------------------------ */
+
+.문제머리 {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.문제머리 > span {
+  color: var(--초록);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+/* 남은 시간. 진초록 동그라미 안에 숫자를 넣는다. */
+.타이머 {
+  align-items: center;
+  background: var(--진초록);
+  border-radius: 50%;
+  color: white;
+  display: flex;
+  font-size: 20px;
+  font-weight: 800;
+  height: 52px;
+  width: 52px;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;   /* 숫자 폭 고정 → 덜 흔들림 */
+}
+
+/* 5초 이하로 남으면 빨갛게 바뀌고 두근거린다. */
+.타이머.위급 {
+  background: var(--빨강);
+  animation: 두근 0.8s infinite;         /* infinite = 무한 반복 */
+}
+
+/* @keyframes 는 움직임을 정의하는 곳이다. 50% 지점에서 살짝 커진다. */
+@keyframes 두근 {
+  50% { transform: scale(1.06); }
+}
+
+.문제문구 {
+  font-size: clamp(24px, 7vw, 36px);
+  letter-spacing: -0.055em;
+  line-height: 1.3;
+  margin: 24px 0;
+  word-break: keep-all;                 /* 한글 단어가 중간에서 안 잘리게 */
+}
+
+/* 보기 버튼들 */
+.보기목록 { display: grid; gap: 10px; }
+
+/* O / X 는 두 칸으로 크게 */
+.보기목록.오엑스 { grid-template-columns: repeat(2, 1fr); }
+
+.보기 {
+  align-items: center;
+  background: #f3f6f4;
+  border: 2px solid transparent;        /* 평소엔 투명 테두리 */
+  border-radius: 15px;
+  color: var(--먹색);
+  display: flex;
+  font-size: 15px;
+  gap: 12px;
+  min-height: 56px;
+  padding: 10px 14px;
+  text-align: left;
+}
+
+/* 보기 앞의 번호 동그라미 */
+.보기 > span {
+  align-items: center;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  flex: 0 0 auto;                       /* 찌그러지지 않게 고정 */
+  font-size: 12px;
+  font-weight: 900;
+  height: 28px;
+  width: 28px;
+  justify-content: center;
+}
+
+.보기목록.오엑스 .보기 {
+  font-size: 42px;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 108px;
+}
+
+/* 내가 고른 보기 */
+.보기.선택됨 {
+  background: var(--연초록);
+  border-color: var(--초록);
+  color: var(--진초록);
+}
+
+.제출버튼 { margin-top: 18px; width: 100%; }
+
+/* 제출 결과 알림 상자 */
+.결과상자 {
+  background: #f1f7f4;
+  border-radius: 14px;
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+}
+
+.결과상자 strong { font-size: 15px; }
+.결과상자 span   { color: var(--흐린색); font-size: 13px; }
+
+
+/* ------------------------------------------------------------
+   7) 프로젝터 화면 (강당 대형 화면용)
+   ------------------------------------------------------------
+   여기만 배경이 짙은 초록이라 글자색을 흰색으로 뒤집는다.
+   ------------------------------------------------------------ */
+
+.프로젝터 {
+  background: var(--진초록);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow: hidden;
+  padding: clamp(24px, 3vw, 48px) clamp(28px, 5vw, 80px);
+  position: relative;
+}
+
+/* 오른쪽 위에 큰 원 테두리 장식 */
+.프로젝터::after {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  content: "";
+  height: 70vw;
+  width: 70vw;
+  position: absolute;
+  right: -35vw;
+  top: -35vw;
+}
+
+.프로젝터 > * { position: relative; z-index: 1; }
+
+.프로젝터 .로고글 small { color: #a8c7bc; }
+
+.프로젝터 .로고표 {
+  font-size: clamp(11px, 1vw, 15px);
+  height: clamp(44px, 5vw, 72px);
+  width: clamp(44px, 5vw, 72px);
+}
+
+.프로젝터 .로고글 strong { font-size: clamp(16px, 2vw, 28px); }
+
+/* 가운데 내용 영역. flex: 1 은 "남는 공간을 전부 차지해라". */
+.프로젝터내용 {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin: clamp(24px, 5vh, 60px) 0;
+  text-align: center;
+}
+
+.화면머리말 {
+  color: #e5b848;
+  font-size: clamp(13px, 1.4vw, 20px);
+  font-weight: 900;
+  letter-spacing: 0.22em;
+}
+
+.프로젝터 .문제문구 {
+  font-size: clamp(34px, 6vw, 96px);
+  letter-spacing: -0.07em;
+  line-height: 1.08;
+  margin: 20px 0 30px;
+}
+
+/* 프로젝터에서 문제 아래 붙는 설명 글 (보기가 아니라 안내 문구용) */
+.프로젝터 .부연설명 {
+  color: #b7cec6;
+  font-size: clamp(18px, 2vw, 30px);
+}
+
+/* 프로젝터의 타이머는 동그라미 없이 큰 숫자만 */
+.프로젝터 .타이머 {
+  background: none;
+  color: #f2c55c;
+  font-size: clamp(48px, 9vw, 130px);
+  height: auto;
+  width: auto;
+  margin: 10px auto;
+}
+
+.프로젝터 .타이머.위급 { background: none; color: #ff8f8f; }
+
+.정답공개 {
+  color: #7fdcb4;
+  font-size: clamp(26px, 4vw, 60px);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+}
+
+/* 숫자 현황 (생존 / 전체 / 제출) */
+.현황 {
+  display: flex;
+  gap: clamp(20px, 5vw, 70px);
+  justify-content: center;
+  flex-wrap: wrap;                      /* 자리가 모자라면 아랫줄로 */
+}
+
+.현황 div  { text-align: center; }
+.현황 b    { color: #f2c55c; display: block; font-size: clamp(30px, 5vw, 64px); }
+.현황 span { color: #a8c7bc; font-size: clamp(12px, 1.3vw, 18px); }
+
+/* 아래쪽 참가 주소 안내 */
+.프로젝터바닥 {
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  color: #bad0c9;
+  padding-top: 24px;
+  text-align: center;
+}
+
+.참가주소 {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px dashed #e5b848;           /* dashed = 점선 */
+  border-radius: 14px;
+  color: white;
+  display: inline-block;
+  font-size: clamp(15px, 2vw, 26px);
+  font-weight: 800;
+  margin-top: 10px;
+  padding: 12px 20px;
+  word-break: break-all;                /* 긴 주소가 화면 밖으로 안 나가게 */
+}
+
+
+/* ------------------------------------------------------------
+   8) 관리자 로그인 화면
+   ------------------------------------------------------------ */
+
+.로그인바탕 {
+  align-items: center;
+  background: #f2f5f3;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.로그인카드 {
+  background: var(--종이);
+  border: 1px solid var(--선);
+  border-radius: 24px;
+  box-shadow: var(--그림자);
+  display: grid;
+  gap: 26px;
+  max-width: 460px;
+  padding: 34px;
+  width: 100%;
+}
+
+.로그인카드 h1 {
+  font-size: 34px;
+  letter-spacing: -0.06em;
+  margin: 0;
+}
+
+
+/* ------------------------------------------------------------
+   9) 관리자 콘솔
+   ------------------------------------------------------------ */
+
+.관리자바탕 { background: #f2f5f3; min-height: 100vh; }
+
+.관리자머리 {
+  align-items: center;
+  background: var(--종이);
+  border-bottom: 1px solid var(--선);
+  display: flex;
+  justify-content: space-between;
+  padding: 15px max(24px, calc((100vw - 1240px) / 2));
+}
+
+.관리자내용 {
+  margin: 0 auto;
+  max-width: 1288px;
+  padding: 40px 24px 70px;
+}
+
+.관리자내용 h1 {
+  font-size: 36px;
+  letter-spacing: -0.055em;
+  margin: 0;
+}
+
+/* 숫자 요약 카드 3개 */
+.요약칸 {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  margin: 28px 0 18px;
+}
+
+.패널, .요약카드 {
+  background: var(--종이);
+  border: 1px solid var(--선);
+  border-radius: 20px;
+}
+
+.요약카드 { padding: 20px 22px; }
+.요약카드 > span   { color: var(--흐린색); font-size: 12px; font-weight: 700; }
+.요약카드 strong   { color: var(--진초록); display: block; font-size: 34px; letter-spacing: -0.04em; }
+
+/* 숫자 아래 붙는 한 줄 설명 (예: "8팀 중 3팀 생존") */
+.요약카드 p { color: var(--흐린색); font-size: 13px; margin: 6px 0 0; }
+
+.패널 { margin-bottom: 18px; padding: 24px; }
+
+.패널 h2 {
+  font-size: 19px;
+  letter-spacing: -0.04em;
+  margin: 0 0 14px;
+}
+
+/* 진행 버튼들을 자동으로 여러 줄에 나눠 배치 */
+.진행버튼 {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin-top: 14px;
+}
+
+.진행버튼 button { min-height: 48px; }
+
+/* 현재 문제 안내 상자 */
+.현재문제상자 {
+  background: #f4f7f5;
+  border: 1px dashed #bdcac5;
+  border-radius: 16px;
+  margin-top: 12px;
+  padding: 18px;
+}
+
+/* 표 */
+table {
+  border-collapse: collapse;            /* 칸 사이 이중선 없애기 */
+  font-size: 14px;
+  width: 100%;
+}
+
+th, td {
+  border-bottom: 1px solid var(--선);
+  padding: 10px 8px;
+  text-align: left;
+}
+
+th { color: var(--흐린색); font-size: 12px; font-weight: 700; }
+
+/* 표 머리에 들어가는 팀 고르는 칸.
+   본문 입력칸보다 작게 만들어 표 높이를 늘리지 않는다. */
+th select {
+  font-size: 12px;
+  font-weight: 700;
+  min-height: 34px;
+  padding: 0 8px;
+  width: auto;
+}
+
+/* 팀별 생존 현황 칸들.
+   auto-fill + minmax 로 화면 너비에 맞게 저절로 줄바꿈된다. */
+.팀별현황 {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+}
+
+.팀칸 {
+  background: #f4f7f5;
+  border: 1px solid var(--선);
+  border-radius: 14px;
+  padding: 12px 14px;
+  text-align: center;
+}
+
+.팀칸 span   { color: var(--흐린색); display: block; font-size: 12px; font-weight: 700; }
+.팀칸 strong { color: var(--진초록); display: block; font-size: 26px; letter-spacing: -0.04em; }
+.팀칸 small  { color: var(--흐린색); font-size: 11px; }
+
+/* 전멸한 팀은 빨갛게, 아무도 안 들어온 팀은 흐리게 */
+.팀칸.전멸 { background: #fbf0f0; border-color: #e8cccc; }
+.팀칸.전멸 strong { color: var(--빨강); }
+.팀칸.빈팀 { opacity: 0.45; }
+
+/* 표 안에 들어가는 작은 버튼 */
+td button {
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+/* 참가자 상태 */
+.생존 { color: var(--초록); font-weight: 800; }
+.탈락 { color: var(--빨강); font-weight: 800; }
+
+
+/* ------------------------------------------------------------
+   10) 좁은 화면 대응
+   ------------------------------------------------------------
+   @media 는 "화면 너비가 620px 이하일 때만 아래를 적용해라"는 뜻이다.
+   ------------------------------------------------------------ */
+@media (max-width: 620px) {
+  .홈 { padding: 20px 18px 50px; }
+  .홈소개 { padding: 44px 0 30px; }
+
+  /* 머리글에 로고 + 표식 + 버튼이 있어서 좁은 화면에서는 넘친다.
+     flex-wrap: wrap 을 주면 자리가 모자랄 때 알아서 아랫줄로 내려간다. */
+  .머리글, .관리자머리 { flex-wrap: wrap; gap: 10px; }
+
+  .관리자내용 { padding: 26px 18px 50px; }
+  .관리자내용 h1 { font-size: 27px; }
+  .패널 { padding: 18px; }
+
+  /* 표가 좁아 글자가 겹치는 걸 막는다 */
+  th, td { padding: 8px 5px; }
+  table { font-size: 13px; }
+}
+
+/* 움직임을 불편해하는 사용자를 위한 배려.
+   운영체제에서 "동작 줄이기"를 켠 사람에게는 애니메이션을 끈다. */
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  index.html  —  첫 화면 (역할별 링크 모음)
+  ============================================================
+  HTML은 "화면에 무엇이 있는지"를 적는 파일이다.
+  꾸미기는 css/style.css 가, 동작은 js/app.js 가 담당한다.
+
+  <!DOCTYPE html>  이 문서가 HTML이라고 브라우저에 알려주는 첫 줄
+  <head>           화면에 안 보이는 설정 (제목, 글자 방식, css 연결)
+  <body>           화면에 실제로 보이는 내용
+
+  [주의] 지금 읽고 있는 이 부분이 주석이다. 화면에 나오지 않는다.
+  다만 주석 안에 "닫는 기호"를 한 번 더 적으면 거기서 주석이 끝나버리고,
+  그 뒤 글자가 전부 화면에 그대로 찍힌다. 주석 안에서는 쓰지 말 것.
+  ============================================================
+-->
+
+<!-- 이런 식으로 한 줄짜리 주석도 쓸 수 있다. 화면에 안 나온다. -->
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <!-- 이 줄이 없으면 한글이 깨져서 나온다 -->
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- 휴대폰에서 화면 크기에 맞춰 보이게 하는 설정 -->
+
+  <title>2026 한가위 골든벨</title>
+  <!-- 브라우저 탭에 뜨는 이름 -->
+
+  <link rel="stylesheet" href="css/style.css">
+  <!-- 디자인 파일을 연결한다. 이 줄이 없으면 꾸밈 없는 흰 화면이 나온다 -->
+</head>
+
+<body data-page="home">
+  <!-- data-page 는 js/app.js 가 "지금 어느 페이지인지" 알아보는 이름표다 -->
+
+  <div class="홈">
+
+    <header class="머리글">
+      <!-- 로고: 금색 종 + 제목/부제 -->
+      <span class="로고">
+        <span class="로고표">골든<br>벨</span>
+        <span class="로고글">
+          <strong>2026 한가위 골든벨</strong>
+          <small>GOLDEN BELL SURVIVAL</small>
+        </span>
+      </span>
+
+      <!-- 오른쪽 끝에 두 개를 나란히 붙이려고 div 로 한 번 더 묶었다.
+           이렇게 안 묶으면 셋이 화면 전체에 균등하게 흩어진다. -->
+      <div class="머리글오른쪽">
+        <span class="표식">2026 한가위</span>
+        <!-- 관리자 버튼. 콘솔로 바로 가지 않고 로그인 화면을 먼저 거친다. -->
+        <a class="보조버튼" href="html/login.html"
+           style="align-items:center;display:inline-flex;min-height:44px">
+          🔒 관리자
+        </a>
+      </div>
+    </header>
+
+    <section class="홈소개">
+      <p class="눈썹">2026 추석 행사</p>
+      <h1>모두의 답이 모이는<br>실시간 골든벨</h1>
+      <p>
+        참가 등록부터 실시간 진행, 자동 채점과 프로젝터 연출까지 이어집니다.
+        아래에서 역할에 맞는 화면을 선택하세요.
+      </p>
+    </section>
+
+    <!-- a 태그는 링크다. href 에 이동할 주소를 적는다. -->
+    <section class="바로가기">
+
+      <a class="바로가기카드" href="html/join.html">
+        <div class="카드머리">
+          <span class="카드번호">01</span>
+          <span class="꼬리표">참가자</span>
+        </div>
+        <div>
+          <h2>참가 등록</h2>
+          <p>팀을 고르고 이름을 적어 행사에 참가하는 모바일 화면입니다.</p>
+        </div>
+        <span class="화살표" aria-hidden="true">→</span>
+        <!-- aria-hidden 은 화면을 소리로 읽어주는 기기에게
+             "이 화살표는 안 읽어도 된다"고 알려준다 -->
+      </a>
+
+      <a class="바로가기카드" href="html/play.html">
+        <div class="카드머리">
+          <span class="카드번호">02</span>
+          <span class="꼬리표">참가자</span>
+        </div>
+        <div>
+          <h2>게임 화면</h2>
+          <p>문제를 확인하고 답안을 제출하는 모바일 화면입니다.</p>
+        </div>
+        <span class="화살표" aria-hidden="true">→</span>
+      </a>
+
+      <!-- 진행자 콘솔과 프로젝터 화면은 여기에 두지 않는다.
+           둘 다 진행자만 쓰는 화면이라 참가자가 실수로 누르면 곤란하다.
+             · 진행자 콘솔 → 위쪽 머리글의 '🔒 관리자' 버튼
+             · 프로젝터 화면 → 콘솔 안의 '프로젝터 열기' 버튼 -->
+
+    </section>
+
+  </div>
+</body>
+</html>

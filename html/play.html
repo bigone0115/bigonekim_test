@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<!--
+  play.html  —  참가자 게임 화면 (휴대폰용)
+
+  이 파일에는 빈 상자(#본문) 하나만 있다.
+  안에 들어갈 내용(문제, 보기, 타이머, 결과)은 상황마다 달라지므로
+  js/app.js 의 그리기() 함수가 그때그때 만들어 넣는다.
+-->
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>게임 · 골든벨</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body data-page="play">
+  <div class="모바일">
+
+    <header class="머리글">
+      <!-- 내 팀과 이름이 여기에 채워진다 -->
+      <span class="로고">
+        <span class="로고표">골든<br>벨</span>
+        <span class="로고글">
+          <strong id="내이름">-</strong>
+          <small>참가자</small>
+        </span>
+      </span>
+      <!-- 현재 진행 단계가 여기에 채워진다 -->
+      <span class="표식" id="단계표시">-</span>
+    </header>
+
+    <!-- 문제와 답안 입력이 통째로 들어가는 자리 -->
+    <div id="본문"></div>
+
+    <!-- 서버 연결이 끊기면 js/store.js 가 여기에 글을 넣는다 -->
+    <p class="안내" id="연결표시" style="font-size:12px;text-align:center;margin-top:18px"></p>
+
+    <p class="안내" style="font-size:12px;text-align:center">
+      화면을 끄거나 새로고침해도 참가 상태는 유지됩니다.
+    </p>
+
+  </div>
+
+  <script src="../js/store.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

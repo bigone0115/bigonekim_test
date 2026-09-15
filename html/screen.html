@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<!--
+  screen.html  —  프로젝터 화면 (강당 대형 화면용)
+
+  참가자 화면과 같은 데이터를 보지만, 멀리서도 보이게 글씨를 키웠다.
+  배경도 짙은 초록으로 뒤집었다. (css/style.css 의 .프로젝터 부분)
+
+  정답은 진행자가 '정답 공개'를 누르기 전까지 절대 표시되지 않는다.
+-->
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>프로젝터 · 골든벨</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body data-page="screen">
+  <div class="프로젝터">
+
+    <header class="머리글">
+      <a class="로고" href="../index.html">
+        <span class="로고표">골든<br>벨</span>
+        <span class="로고글">
+          <strong>2026 한가위 골든벨</strong>
+          <small>GOLDEN BELL SURVIVAL</small>
+        </span>
+      </a>
+      <span class="표식" id="단계표시">-</span>
+    </header>
+
+    <!-- 문제 / 타이머 / 정답 / FINAL 연출이 들어가는 자리 -->
+    <div class="프로젝터내용" id="문제영역"></div>
+
+    <!-- 숫자 현황 세 가지.
+         게임이 시작되기 전에는 보여줄 내용이 없으므로 js/app.js 가 숨긴다.
+         hidden 은 "이 요소를 감춰라"는 HTML 기본 속성이다. -->
+    <div class="현황" id="현황" hidden>
+      <div><b id="참여수">0</b><span>참여 인원</span></div>
+      <div><b id="생존수">0</b><span>생존 인원</span></div>
+      <div><b id="남은문제수">0</b><span>남은 문제</span></div>
+    </div>
+
+    <!-- 서버 연결이 끊기면 js/store.js 가 여기에 글을 넣는다 -->
+    <p class="안내" id="연결표시" style="text-align:center"></p>
+
+    <!-- 참가 주소 안내. 게임이 시작되면 js/app.js 가 숨긴다.
+         문제를 푸는 중에는 큰 화면을 문제에 온전히 쓰는 편이 낫다. -->
+    <footer class="프로젝터바닥" id="주소안내">
+      <p style="margin:0">휴대폰으로 아래 주소에 접속하세요</p>
+      <!-- 실제 접속 주소는 js/app.js 가 현재 주소를 보고 자동으로 넣는다 -->
+      <p class="참가주소" id="참가주소">-</p>
+    </footer>
+
+  </div>
+
+  <script src="../js/store.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
