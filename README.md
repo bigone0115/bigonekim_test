@@ -36,6 +36,33 @@ goldenbell-web2/
     └── create-admin.mjs 진행자 계정 만들기
 ```
 
+## 만드는 데 쓴 도구
+
+이 저장소는 Claude Code 로 작업했다. 붙여둔 스킬은 아래와 같다.
+
+| 스킬 | 무엇을 하나 | 이 프로젝트에서 |
+|---|---|---|
+| **ponytail** | 가장 단순하게 도는 방법을 먼저 찾게 한다 (YAGNI · 표준 기능 우선 · 최소 코드) | **내내 켜둠**. 의존성을 express·pg 두 개로 묶어둔 것, 라이브러리 대신 SSE·scrypt·pointer 사건 같은 브라우저/Node 내장 기능을 쓴 것이 이 규칙을 따른 결과다 |
+| anthropic-skills | 문서 · docx · pdf · pptx · xlsx · 스킬 제작 | 안 씀 |
+| frontend-design / dataviz / artifact-* | 화면 디자인 · 차트 · 공유 페이지 | 안 씀 |
+| code-review / simplify / security-review | 코드 검토 | 안 씀 |
+| claude-in-chrome | 브라우저를 직접 열어 화면 확인 | 안 씀 (설치 안 함) |
+| init / run / loop / schedule / update-config 등 | 프로젝트 설정 · 실행 · 반복 작업 | 안 씀 |
+
+### 코드의 `ponytail:` 주석
+
+일부러 단순하게 만들고 넘어간 자리에 붙여둔 표시다.
+"여기는 이 한계까지만 버틴다, 넘어가면 이렇게 바꿔라"를 적어둔 것이라
+나중에 손볼 곳을 찾을 때 `ponytail:` 로 검색하면 된다.
+
+```
+server/server.js   진행자 세션을 메모리에 둔다 → 서버를 여러 대로 늘리면 DB 세션 표로
+server/server.js   기본 PIN 을 1234 로 고정 → 외부 공개 행사면 무작위 4자리로
+server/server.js   정적 파일 캐시를 끈다 → 규모가 커지면 파일 이름에 번호를 붙이는 방식으로
+js/app.js          상태가 바뀔 때마다 내 정보를 한 번 더 물어본다 → 수백 명이면 실시간에 같이 실어 보내도록
+```
+
+
 ## ★ 문제 파일은 저장소에 없다
 
 `db/006_questions.sql` 에 행사 문제 48개와 **정답**이 들어 있다.
