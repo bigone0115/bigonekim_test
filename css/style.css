@@ -52,6 +52,21 @@ html, body {
   min-height: 100%;
 }
 
+/* ★ hidden 을 붙이면 무조건 사라지게 한다.
+
+   HTML 의 hidden 속성은 "브라우저 기본 규칙인 display: none" 으로 동작한다.
+   그래서 어딘가에 display: flex 나 display: grid 를 직접 적어두면
+   그쪽이 이겨버리고, hidden 을 붙여도 화면에서 안 사라진다.
+
+   실제로 프로젝터의 숫자 현황(.현황 은 display: flex 다)이 이것 때문에
+   빙고 중에도 계속 보였다. 겉으로는 자바스크립트가 안 먹는 것처럼 보여서
+   찾는 데 오래 걸렸다.
+
+   [hidden] 은 "hidden 속성이 붙은 요소"를 고른다.
+   !important 는 "다른 규칙보다 이걸 우선해라"는 뜻이다.
+   평소에는 쓰지 않는 게 좋지만, 감추라는 지시만큼은 예외 없이 지켜져야 한다. */
+[hidden] { display: none !important; }
+
 body {
   background: var(--크림);
   color: var(--먹색);
@@ -589,6 +604,7 @@ label {
   flex-wrap: wrap;                      /* 자리가 모자라면 아랫줄로 */
 }
 
+
 .현황 div  { text-align: center; }
 .현황 b    { color: #f2c55c; display: block; font-size: clamp(30px, 5vw, 64px); }
 .현황 span { color: #a8c7bc; font-size: clamp(12px, 1.3vw, 18px); }
@@ -723,9 +739,23 @@ label {
 }
 
 /* 표 */
+/* 표를 감싸는 상자.
+
+   overflow-x: auto 는 "안쪽이 넘치면 그 부분만 옆으로 밀 수 있게 하라"는 뜻이다.
+   참가자 표는 칸이 일곱 개라 좁은 화면에서 반드시 넘친다.
+   이 상자가 없으면 화면 전체가 옆으로 밀려서 버튼들도 같이 따라 움직인다.
+
+   -webkit-overflow-scrolling 은 아이폰에서 손가락을 떼도
+   관성으로 스르륵 밀리게 해준다. */
+.표상자 {
+  -webkit-overflow-scrolling: touch;
+  overflow-x: auto;
+}
+
 table {
   border-collapse: collapse;            /* 칸 사이 이중선 없애기 */
   font-size: 14px;
+  min-width: 560px;                     /* 이보다 좁아지면 글자가 겹친다 → 상자가 밀린다 */
   width: 100%;
 }
 
@@ -806,7 +836,580 @@ td button {
   /* 표가 좁아 글자가 겹치는 걸 막는다 */
   th, td { padding: 8px 5px; }
   table { font-size: 13px; }
+
+  /* --- 여기부터 빙고 --- */
+
+  /* 프로젝터를 휴대폰이나 작은 화면으로 열었을 때.
+     공 50개가 좁은 판에 몰리면 서로 가려서 못 누른다.
+     공을 줄이고 판을 늘려 손가락이 들어갈 틈을 만든다. */
+  .볼판 { height: 62vh; }
+  .볼 { font-size: 22px; height: 44px; width: 44px; }
+
+  /* 머리글의 참여 인원. 줄이 바뀌면 왼쪽 세로선이 어색해지므로 위쪽 선으로 바꾼다. */
+  .머리글왼쪽 { flex-wrap: wrap; gap: 10px; }
+  .머리숫자 {
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.25);
+    padding: 8px 0 0;
+    width: 100%;
+  }
+
+  /* 뽑힌 번호 팝업 */
+  .볼팝업머리 { font-size: 15px; margin-bottom: 16px; }
+  .볼팝업꼬리 { font-size: 15px; margin-top: 18px; }
+
+  /* 숫자 묶음 버튼 다섯 개가 한 줄에 들어가야 한다 */
+  .빙고묶음버튼 { font-size: 11px; padding: 6px 0; }
+
+  /* 지금까지 부른 번호 */
+  .빙고지나간번호 { gap: 6px; margin-top: 14px; }
+  .빙고지나간번호 span { font-size: 16px; padding: 4px 9px; }
 }
+
+
+/* ------------------------------------------------------------
+   10-2) 데스크탑 대응
+   ------------------------------------------------------------
+   지금까지 쓴 규칙은 전부 "휴대폰 기준"이다.
+   .모바일 은 520px 로 묶여 있어서, 노트북으로 열면 넓은 화면 한가운데에
+   휴대폰만 한 띠가 하나 떠 있는 모양이 된다.
+
+   등록 화면(join.html)은 진행측 노트북에서 쓰는 화면이라 이게 특히 안 맞는다.
+   그래서 화면이 넓을 때만 아래 규칙으로 덮어쓴다.
+
+   [기기를 어떻게 알아보나]
+   "안드로이드냐 아이폰이냐"를 따지지 않고 화면 너비만 본다.
+   기기 이름으로 가려내는 방법은 새 기기가 나올 때마다 틀리고,
+   노트북에서 창을 반으로 줄인 경우도 못 잡아낸다.
+   실제로 중요한 건 "지금 쓸 수 있는 너비가 얼마인가" 하나뿐이다.
+
+   min-width 는 "이보다 넓을 때"라는 뜻이다 (max-width 의 반대).
+   ------------------------------------------------------------ */
+@media (min-width: 900px) {
+
+  /* 휴대폰 띠를 풀고 홈 화면과 같은 너비를 쓴다.
+     화면마다 폭이 다르면 옮겨 다닐 때 눈에 거슬린다. */
+  .모바일 {
+    max-width: 1180px;
+    padding: 34px 32px 70px;
+  }
+
+  .카드 {
+    margin-top: 24px;
+    padding: 38px 44px;
+  }
+
+  .카드 h1 { font-size: 40px; }
+  .카드 h2 { font-size: 27px; }
+
+  /* ★ 입력칸을 "이름표 | 칸" 두 줄짜리로 바꾼다.
+
+     .입력묶음 안에는 label 과 입력칸이 번갈아 들어 있다.
+     칸을 둘로 나누면 label 이 왼쪽, 입력칸이 오른쪽에 저절로 자리를 잡는다.
+     세로로 쌓였을 때보다 화면을 절반만 쓰므로, 노트북에서 한눈에 들어온다. */
+  .입력묶음 {
+    align-items: center;
+    column-gap: 20px;
+    grid-template-columns: 150px 1fr;
+    row-gap: 14px;
+
+    /* 카드는 넓게 쓰되 입력칸까지 따라 늘리지는 않는다.
+       글자 몇 자 넣는 칸이 900px 이 되면 오히려 쓰기 불편하다. */
+    margin: 0 auto;
+    max-width: 640px;
+  }
+
+  .입력묶음 label {
+    font-size: 14px;
+    margin: 0;
+    text-align: right;
+  }
+
+  /* 버튼과 안내 문구는 이름표가 없으므로 두 칸을 다 쓰게 한다.
+     1 / -1 은 "첫 칸부터 마지막 칸까지"라는 뜻이다. */
+  .입력묶음 > button,
+  .입력묶음 > p,
+  .입력묶음 > a { grid-column: 1 / -1; }
+
+  /* 빙고판은 넓다고 따라 커지면 안 된다.
+     한 칸이 200px 이 되면 판 전체가 화면 밖으로 나간다. */
+  .빙고판, .빙고숫자, .빙고묶음 {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 520px;
+  }
+
+  .빙고칸 { font-size: 20px; }
+  .빙고숫자칩 { font-size: 18px; min-height: 48px; }
+
+  /* 진행자 로그인 카드도 이름표가 왼쪽으로 가면서 폭이 더 필요해진다.
+     460px 그대로 두면 입력칸이 반으로 쪼그라든다. */
+  .로그인카드 { max-width: 620px; padding: 42px; }
+
+  /* --- 등록 화면을 좌우 두 칸으로 ---
+     왼쪽: 안내 + 팀 현황 (접수대가 계속 보는 것)
+     오른쪽: 입력칸 (계속 치는 곳)
+
+     1.05fr / 1fr = 왼쪽을 아주 조금만 넓게.
+     팀 이름이 길어져도 칸이 찌그러지지 않는다. */
+  .등록판 {
+    align-items: start;
+    gap: 34px;
+    grid-template-columns: 1.05fr 1fr;
+    margin-top: 10px;
+  }
+
+  .등록안내 { padding-top: 26px; }
+  .등록안내 h1 { font-size: 46px; }
+  .등록안내 .안내 { font-size: 16px; }
+  .등록안내제목 { font-size: 15px; margin-top: 34px; }
+
+  .팀현황 { gap: 10px; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); }
+  .팀칸 { padding: 13px 15px; }
+  .팀칸 b { font-size: 14px; }
+  .팀칸 span { font-size: 23px; }
+
+  /* 입력칸 쪽은 카드 안에 꽉 채운다.
+     위에서 640px 로 묶어둔 것을 여기서는 풀어야 두 칸이 균형이 맞는다. */
+  .등록칸 { margin-top: 0; padding: 34px; }
+  .등록칸 .입력묶음 { max-width: none; }
+  .등록칸 .입력묶음 label { text-align: left; }
+  .등록칸 .입력묶음 { grid-template-columns: 118px 1fr; }
+}
+
+
+/* 아주 좁은 휴대폰 (아이폰 SE 등) */
+@media (max-width: 380px) {
+  .모바일 { padding: 14px; }
+  .카드 { padding: 20px 16px; }
+
+  /* 빙고판 칸과 숫자 칩이 작아지므로 글자도 같이 줄인다.
+     gap 을 줄여야 다섯 칸이 화면 안에 들어간다. */
+  .빙고판, .빙고숫자, .빙고묶음 { gap: 4px; }
+  .빙고칸 { border-radius: 8px; font-size: 14px; }
+  .빙고숫자칩 { font-size: 14px; min-height: 40px; }
+  .빙고묶음버튼 { font-size: 10px; }
+}
+
+/* ------------------------------------------------------------
+   11) 빙고
+   ------------------------------------------------------------ */
+
+/* 5x5 격자.
+   grid-template-columns: repeat(5, 1fr) 은
+   "같은 너비의 세로줄 5개를 만들어라"는 뜻이다.
+   1fr = 남은 자리를 똑같이 나눠 가진다. */
+.빙고판 {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(5, 1fr);
+  margin: 16px 0;
+}
+
+/* aspect-ratio: 1 은 "가로세로 비율을 1:1로" = 정사각형.
+   높이를 직접 정하지 않아도 화면 너비에 맞춰 알아서 커지고 줄어든다. */
+.빙고칸 {
+  align-items: center;
+  aspect-ratio: 1;
+  background: var(--종이);
+  border: 1px solid var(--선);
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  font-size: 17px;
+  font-weight: 700;
+  justify-content: center;
+  user-select: none;             /* 길게 눌러도 글자가 선택되지 않게 */
+}
+
+/* 불린 번호. 색만 바꾸지 않고 글자도 굵게 한다.
+   색을 구분하기 어려운 사람도 알아볼 수 있어야 한다. */
+.빙고칸.맞음 {
+  background: var(--초록);
+  border-color: var(--초록);
+  color: #fff;
+  font-weight: 800;
+}
+
+/* 빙고칸은 끌어다 놓는 자리이기도 하다.
+   touch-action: none 은 "이 요소에서는 브라우저의 기본 터치 동작(스크롤·확대)을
+   하지 말라"는 뜻이다. 이게 없으면 숫자를 끄는 대신 화면이 스크롤된다. */
+.빙고칸 { touch-action: none; }
+
+/* 숫자 묶음 버튼 (1~10, 11~20, ...) */
+.빙고묶음 {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(5, 1fr);
+  margin-bottom: 10px;
+}
+
+.빙고묶음버튼 {
+  background: var(--종이);
+  border: 1px solid var(--선);
+  border-radius: 999px;
+  color: var(--흐린색);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  min-height: 36px;
+  padding: 6px 0;
+}
+
+.빙고묶음버튼.고름 {
+  background: var(--초록);
+  border-color: var(--초록);
+  color: #fff;
+}
+
+/* 끌어다 놓을 숫자들. 한 줄에 다섯 개씩. */
+.빙고숫자 {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(5, 1fr);
+  min-height: 48px;
+}
+
+.빙고숫자칩 {
+  align-items: center;
+  background: var(--연초록);
+  border: 1px solid var(--선);
+  border-radius: 10px;
+  color: var(--먹색);
+  cursor: grab;
+  display: flex;
+  font-size: 16px;
+  font-weight: 700;
+  justify-content: center;
+  min-height: 44px;              /* 손가락으로 집을 수 있는 최소 크기 */
+  touch-action: none;            /* 끄는 동안 화면이 스크롤되지 않게 */
+  user-select: none;
+}
+
+/* 끄는 동안 손가락을 따라다니는 숫자.
+
+   position: fixed 는 화면 기준으로 자리를 잡는다 (스크롤해도 안 따라간다).
+   translate(-50%, -50%) 로 손가락이 숫자 한가운데 오게 맞춘다.
+   pointer-events: none 이 중요하다 — 이게 없으면 "손가락 아래에 무엇이 있나"를
+   물었을 때 이 유령이 잡혀서, 어느 칸에 놓는지 알 수 없게 된다. */
+.빙고유령 {
+  align-items: center;
+  background: var(--초록);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  color: #fff;
+  display: flex;
+  font-size: 20px;
+  font-weight: 800;
+  height: 52px;
+  justify-content: center;
+  pointer-events: none;
+  position: fixed;
+  transform: translate(-50%, -50%);
+  width: 52px;
+  z-index: 100;
+}
+
+/* 지금까지 부른 번호들. 작게 깔아둔다. */
+.빙고지나간번호 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.빙고지나간번호 span {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  font-size: 22px;
+  font-weight: 700;
+  padding: 6px 12px;
+}
+
+/* 방금 부른 번호만 금색으로 표시 */
+.빙고지나간번호 span.맞음 { background: var(--금색); color: var(--진초록); }
+
+
+/* ------------------------------------------------------------
+   12) 프로젝터 볼 뽑기
+   ------------------------------------------------------------
+   현장에서 참가자가 화면의 볼을 직접 눌러 번호를 뽑는다.
+   볼에는 숫자가 없다. 누르고 나서야 숫자가 나온다.
+   ------------------------------------------------------------ */
+
+/* 볼들이 흩어져 있는 판.
+   position: relative 를 줘야 안쪽 볼의 left/top 이 이 판을 기준으로 잡힌다.
+
+   뽑힌 번호를 크게 띄우던 자리를 없애고 그만큼 볼판을 키웠다.
+   볼판이 커지면 볼이 화면 위쪽까지 올라와서 서서 고르기 편하다. */
+.볼판 {
+  height: 56vh;
+  margin: 18px 0 6px;
+  position: relative;
+}
+
+/* 볼 하나. 가로세로가 같아 동그랗게 보인다.
+   translate(-50%, -50%) 로 left/top 이 볼의 한가운데를 가리키게 맞춘다. */
+.볼 {
+  animation: 둥둥 3.4s ease-in-out infinite;
+  border: none;
+  border-radius: 50%;
+  box-shadow: inset -6px -8px 14px rgba(0, 0, 0, 0.22),
+              0 8px 18px rgba(0, 0, 0, 0.28);
+  color: #fff;
+  cursor: pointer;
+  font-size: 34px;
+  font-weight: 800;
+  height: clamp(52px, 7vw, 86px);
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: clamp(52px, 7vw, 86px);
+
+  /* ★ 섞이는 애니메이션의 핵심.
+     left/top 이 바뀔 때 브라우저가 알아서 0.9초에 걸쳐 미끄러지듯 옮겨준다.
+     자바스크립트는 새 자리만 알려주면 되고, 한 프레임씩 그릴 필요가 없다.
+
+     cubic-bezier 는 움직이는 빠르기 곡선이다.
+     이 값은 처음에 살짝 뒤로 당겼다가 튕겨 나가듯 움직인다. */
+  transition: left 0.9s cubic-bezier(0.34, 1.4, 0.5, 1),
+              top 0.9s cubic-bezier(0.34, 1.4, 0.5, 1),
+              opacity 0.4s, transform 0.4s;
+}
+
+.볼:hover { filter: brightness(1.15); }
+
+/* 공 색 다섯 가지를 돌려 쓴다. 숫자와는 아무 상관이 없다 (보기 좋으라고).
+
+   ★ 앞에 .볼 을 붙이지 않았다.
+     팝업에 뜨는 큰 공(.볼팝업공)도 같은 색을 그대로 써야
+     "내가 고른 그 공이 커진 것"으로 보이기 때문이다.
+
+   radial-gradient(circle at 34% 30%, 밝은색, 어두운색) 은
+   왼쪽 위에서 빛이 들어오는 것처럼 칠해서 평평한 원을 공처럼 보이게 한다. */
+.색0 { background: radial-gradient(circle at 34% 30%, #ffd977, #e0a936); }
+.색1 { background: radial-gradient(circle at 34% 30%, #7fd3bb, #176b56); }
+.색2 { background: radial-gradient(circle at 34% 30%, #ff9e9e, #ae3f3f); }
+.색3 { background: radial-gradient(circle at 34% 30%, #9fc6ff, #35609e); }
+.색4 { background: radial-gradient(circle at 34% 30%, #d5aaff, #6b4b9e); }
+
+/* 고른 볼은 팝업이 뜨는 동안 조용히 줄어들며 사라진다.
+   번호는 팝업이 보여주므로 볼 자체는 비켜주면 된다. */
+.볼.뽑는중 {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.3);
+}
+
+/* 볼이 제자리에서 조금씩 떠다니게 한다.
+   시작 시점(animation-delay)을 볼마다 다르게 줘서 따로 노는 것처럼 보인다. */
+@keyframes 둥둥 {
+  0%, 100% { margin-top: 0; }
+  50%      { margin-top: -10px; }
+}
+
+/* 볼판 아래 한 줄 안내 */
+.볼안내 { margin: 0; opacity: 0.75; }
+
+
+/* ------------------------------------------------------------
+   14) 등록 화면 (join.html)
+   ------------------------------------------------------------
+   기본은 휴대폰과 같이 위아래로 쌓인 모양이다.
+   노트북 너비에서는 아래 10-2 규칙이 좌우 두 칸으로 바꾼다.
+   ------------------------------------------------------------ */
+
+.등록판 {
+  display: grid;
+  gap: 18px;
+}
+
+.등록안내 { padding-top: 18px; }
+
+.등록안내 h1 {
+  font-size: 34px;
+  letter-spacing: -0.06em;
+  margin: 0 0 12px;
+}
+
+.등록안내제목 {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin: 26px 0 12px;
+}
+
+/* 팀별 등록 현황 칸들.
+   auto-fit + minmax = 들어갈 수 있는 만큼 자동으로 나눠 담는다.
+   팀이 8개든 12개든 규칙을 안 고쳐도 된다. */
+.팀현황 {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+}
+
+.팀칸 {
+  background: rgba(255, 254, 249, 0.8);
+  border: 1px solid var(--선);
+  border-radius: 14px;
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+}
+
+.팀칸 b { font-size: 13px; letter-spacing: -0.03em; }
+
+.팀칸 span {
+  color: var(--초록);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.팀칸 small { color: var(--흐린색); font-size: 11px; }
+
+/* 정원이 찬 팀은 빨간색으로 바꿔 접수대에서 바로 걸러내게 한다 */
+.팀칸.마감 {
+  background: #fdf4f4;
+  border-color: #eccfcf;
+}
+
+.팀칸.마감 span,
+.팀칸.마감 small { color: var(--빨강); }
+
+/* 머리글 왼쪽 묶음 (로고 + 참여 인원) */
+.머리글왼쪽 {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+}
+
+/* 제목 옆에 붙는 참여 인원.
+   아래 현황 칸을 접고 이 자리로 올렸다 (공판이 화면을 넓게 쓰도록). */
+.머리숫자 {
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
+  font-size: 15px;
+  font-weight: 700;
+  opacity: 0.85;
+  padding-left: 18px;
+  white-space: nowrap;
+}
+
+.머리숫자 b {
+  color: var(--금색);
+  font-size: 26px;
+  margin-right: 4px;
+}
+
+
+
+/* 진행자 콘솔의 빙고 달성 알림 */
+.빙고알림 {
+  animation: 빙고번쩍 1.4s ease-in-out 3;
+  background: var(--연초록);
+  border: 2px solid var(--초록);
+  border-radius: 16px;
+  margin: 0 0 18px;
+  padding: 16px 18px;
+}
+
+.빙고알림 strong {
+  color: var(--초록);
+  display: block;
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+
+.빙고알림 p {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* 처음 뜰 때 몇 번 번쩍여서 눈에 걸리게 한다.
+   행사장에서는 소리가 묻히므로 눈에도 보여야 한다. */
+@keyframes 빙고번쩍 {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(23, 107, 86, 0); }
+  50%      { box-shadow: 0 0 0 8px rgba(23, 107, 86, 0.18); }
+}
+
+
+/* ------------------------------------------------------------
+   13) 뽑힌 번호 팝업
+   ------------------------------------------------------------
+   공을 고르면 화면 전체를 덮고 번호를 크게 보여준다.
+   뒷자리에서도 확실히 보여야 하므로 가운데에 크게 띄운다.
+   ------------------------------------------------------------ */
+
+/* inset: 0 은 위·오른쪽·아래·왼쪽을 전부 0 으로 = 화면 전체를 덮는다.
+   backdrop-filter: blur 는 뒤에 있는 것을 흐리게 만든다. */
+.볼팝업 {
+  align-items: center;
+  animation: 팝업등장 0.25s ease-out;
+  backdrop-filter: blur(6px);
+  background: rgba(16, 63, 53, 0.86);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 200;
+}
+
+
+.볼팝업속 { text-align: center; }
+
+.볼팝업머리 {
+  color: var(--금색);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  margin: 0 0 24px;
+  text-transform: uppercase;
+}
+
+/* 팝업 한가운데의 큰 공. 볼과 같은 색을 입혀서 "내가 고른 그 공"으로 보이게 한다. */
+.볼팝업공 {
+  align-items: center;
+  border-radius: 50%;
+  box-shadow: inset -14px -18px 30px rgba(0, 0, 0, 0.25),
+              0 24px 60px rgba(0, 0, 0, 0.45);
+  color: #fff;
+  display: flex;
+  font-size: clamp(90px, 14vw, 190px);
+  font-weight: 800;
+  height: clamp(210px, 32vw, 420px);
+  justify-content: center;
+  letter-spacing: -0.04em;
+  margin: 0 auto;
+  width: clamp(210px, 32vw, 420px);
+}
+
+/* 번호가 드러나는 순간 한 번 크게 튄다 */
+.볼팝업공.공개 { animation: 번호등장 0.55s cubic-bezier(0.34, 1.6, 0.5, 1); }
+
+.볼팝업꼬리 {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 20px;
+  margin: 26px 0 0;
+}
+
+/* 글이 비면 자리까지 없앤다.
+   안 그러면 빈 줄의 위쪽 여백 때문에 공이 살짝 위로 밀려 보인다. */
+.볼팝업꼬리:empty { display: none; }
+
+@keyframes 팝업등장 {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes 번호등장 {
+  0%   { transform: scale(0.55); }
+  60%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+
 
 /* 움직임을 불편해하는 사용자를 위한 배려.
    운영체제에서 "동작 줄이기"를 켠 사람에게는 애니메이션을 끈다. */

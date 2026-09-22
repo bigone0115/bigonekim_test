@@ -153,16 +153,33 @@ function 남은초(상태) {
 const 상태_가져오기 = () => 요청('/api/state');
 const 팀목록_가져오기 = () => 요청('/api/teams');
 
-/* 참가 등록. 성공하면 번호표를 저장한다. */
-async function 참가하기(팀번호, 이름) {
-  const 번호표 = 번호표_읽기() || 번호표_만들기();
-  const 참가자 = await 요청('/api/join', {
+/* 참가 등록 (진행측 노트북에서 부른다).
+
+   ★ 여기서는 번호표를 만들지도 저장하지도 않는다.
+   노트북 한 대로 80명을 등록하는데 노트북에 번호표를 저장하면
+   그 노트북이 마지막 참가자 본인이 되어버린다.
+   번호표는 참가자 휴대폰이 로그인할 때(아래 참가자_로그인) 받는다. */
+function 참가하기(팀번호, 이름, PIN, PIN확인) {
+  return 요청('/api/join', {
     teamId: 팀번호,
     name: 이름,
+    pin: PIN,
+    pinConfirm: PIN확인
+  });
+}
+
+/* 참가자 로그인 (참가자 휴대폰에서 부른다).
+   팀 + 이름 + PIN 이 맞으면 이 휴대폰의 번호표가 서버에 등록된다. */
+async function 참가자_로그인(팀번호, 이름, PIN) {
+  const 번호표 = 번호표_읽기() || 번호표_만들기();
+  const 나 = await 요청('/api/login', {
+    teamId: 팀번호,
+    name: 이름,
+    pin: PIN,
     sessionToken: 번호표
   });
-  번호표_저장(번호표);
-  return 참가자;
+  번호표_저장(번호표);     // 서버가 받아준 뒤에 저장한다
+  return 나;
 }
 
 /* 내 정보 + 이번 문제에 낸 답을 가져온다. (새로고침 복구용) */
@@ -172,6 +189,11 @@ function 내정보_가져오기() {
 
   return 요청('/api/me', { sessionToken: 번호표 })
     .catch(() => null);      // 참가 기록이 없으면 null
+}
+
+/* 빙고판 제출. cells 는 왼쪽 위부터 읽어 나간 25칸이다. */
+function 빙고판_제출하기(칸들) {
+  return 요청('/api/bingo/board', { sessionToken: 번호표_읽기(), cells: 칸들 });
 }
 
 /* 답안 제출 */
@@ -196,10 +218,17 @@ const 관리자_로그아웃 = () => 요청('/api/admin/logout', {});
 /* 콘솔에 필요한 것 전부 (상태 + 참가자 표 + 남은 문제) */
 const 관리자_상태 = () => 요청('/api/admin/state');
 
-/* 진행 버튼 누르기 */
-const 관리자_진행 = (작업, 문제번호) =>
-  요청('/api/admin/action', { action: 작업, questionId: 문제번호 });
+/* 진행 버튼 누르기.
+
+   게임종류는 '게임선택' 버튼에서만 쓴다 ('quiz' 또는 'bingo').
+   나머지 버튼은 그 자리를 비워두고 보낸다. */
+const 관리자_진행 = (작업, 문제번호, 게임종류) =>
+  요청('/api/admin/action', { action: 작업, questionId: 문제번호, gameType: 게임종류 });
 
 /* 수동 판정 */
 const 관리자_판정 = (답번호, 판정) =>
   요청('/api/admin/grade', { answerId: 답번호, grade: 판정 });
+
+/* PIN 초기화. 서버가 기본 PIN(1234)을 돌려주므로 진행자가 바로 알려줄 수 있다. */
+const 관리자_PIN초기화 = (참가자번호) =>
+  요청('/api/admin/reset-pin', { participantId: 참가자번호 });

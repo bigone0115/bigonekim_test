@@ -19,13 +19,22 @@
   <div class="프로젝터">
 
     <header class="머리글">
-      <a class="로고" href="../index.html">
-        <span class="로고표">골든<br>벨</span>
-        <span class="로고글">
-          <strong>2026 한가위 골든벨</strong>
-          <small>GOLDEN BELL SURVIVAL</small>
-        </span>
-      </a>
+      <!-- 로고와 참여 인원을 한 묶음으로 둬서 왼쪽에 나란히 붙인다.
+           묶지 않으면 셋이 화면 전체에 균등하게 흩어진다. -->
+      <div class="머리글왼쪽">
+        <a class="로고" href="../index.html">
+          <span class="로고표">골든<br>벨</span>
+          <span class="로고글">
+            <strong>2026 한가위 골든벨</strong>
+            <small>GOLDEN BELL SURVIVAL</small>
+          </span>
+        </a>
+
+        <!-- 빙고 중에는 아래 현황 칸 대신 여기에 참여 인원을 띄운다.
+             공판이 화면을 넓게 써야 해서 아래쪽 자리를 비워준다. -->
+        <span class="머리숫자" id="머리참여수" hidden><b>0</b>명 참여</span>
+      </div>
+
       <span class="표식" id="단계표시">-</span>
     </header>
 
@@ -35,10 +44,24 @@
     <!-- 숫자 현황 세 가지.
          게임이 시작되기 전에는 보여줄 내용이 없으므로 js/app.js 가 숨긴다.
          hidden 은 "이 요소를 감춰라"는 HTML 기본 속성이다. -->
+    <!-- 빙고 중에는 '참여 인원'만 남기고 뒤의 두 개를 감춘다.
+         생존 인원과 남은 문제는 퀴즈에만 있는 개념이다. -->
     <div class="현황" id="현황" hidden>
       <div><b id="참여수">0</b><span>참여 인원</span></div>
-      <div><b id="생존수">0</b><span>생존 인원</span></div>
-      <div><b id="남은문제수">0</b><span>남은 문제</span></div>
+      <div id="생존칸"><b id="생존수">0</b><span>생존 인원</span></div>
+      <div id="남은문제칸"><b id="남은문제수">0</b><span>남은 문제</span></div>
+    </div>
+
+    <!-- 공을 고르면 뜨는 알림창.
+
+         평소에는 hidden 으로 감춰두고, js/app.js 가 열고 닫는다.
+         화면 전체를 덮으므로 뒷자리에서도 번호가 확실히 보인다. -->
+    <div class="볼팝업" id="볼팝업" hidden>
+      <div class="볼팝업속">
+        <p class="볼팝업머리">뽑힌 번호</p>
+        <div class="볼팝업공" id="볼팝업공">?</div>
+        <p class="볼팝업꼬리" id="볼팝업꼬리"></p>
+      </div>
     </div>
 
     <!-- 서버 연결이 끊기면 js/store.js 가 여기에 글을 넣는다 -->

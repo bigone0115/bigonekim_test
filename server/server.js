@@ -55,7 +55,27 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-app.use(express.static(뿌리, { index: 'index.html' }));   // 정적 파일 제공
+/* 화면 파일(html·css·js)도 저장해두지 않게 한다.
+
+   [왜 이렇게까지 하나]
+   브라우저는 한 번 받은 파일을 저장해뒀다가 다시 쓴다.
+   보통은 빠르라고 있는 기능이지만, 이 프로젝트에서는 두 번 발목을 잡았다.
+     · 프로젝터는 한 번 열어두고 행사 내내 그대로 둔다
+     · 진행자 노트북도 콘솔을 띄워놓고 닫지 않는다
+   그 사이에 화면 파일을 고치면, 열려 있던 쪽은 옛 화면을 계속 쓴다.
+   "고쳤는데 왜 그대로지"의 정체가 이것이다.
+
+   참가자 80명 규모에 파일도 몇 개 안 되므로 매번 새로 받아도 부담이 없다.
+   빠른 것보다 "지금 보고 있는 게 최신"인 쪽이 훨씬 중요하다.
+
+   ponytail: 행사 규모가 커지면 파일 이름에 번호를 붙이는 방식으로 바꾼다
+             (app.js?v=3 처럼). 지금은 이게 가장 단순하고 확실하다. */
+app.use(express.static(뿌리, {
+  index: 'index.html',
+  etag: false,
+  lastModified: false,
+  setHeaders: (res) => res.set('Cache-Control', 'no-store')
+}));
 
 
 /* ============================================================
@@ -66,6 +86,40 @@ app.use(express.static(뿌리, { index: 'index.html' }));   // 정적 파일 제
    DB가 유출돼도 남의 번호표를 흉내 낼 수 없다. */
 function 해시(값) {
   return crypto.createHash('sha256').update(String(값)).digest('hex');
+}
+
+/* 비밀번호(진행자 비번 · 참가자 PIN)를 저장할 수 있는 형태로 바꾼다.
+
+   소금 = 매번 달라지는 무작위 글자.
+   이걸 섞어야 같은 PIN 을 쓴 두 사람의 저장값이 서로 달라진다.
+   소금이 없으면 "1234 를 변환한 값"이 모두 같아서, 한 명만 뚫리면 전부 뚫린다.
+
+   저장 형태는 "소금:변환값" 이다. 진행자 계정(create-admin.mjs)과 같은 방식이다. */
+function 비밀번호_만들기(원문) {
+  const 소금 = crypto.randomBytes(16).toString('hex');
+  return 소금 + ':' + crypto.scryptSync(원문, 소금, 64).toString('hex');
+}
+
+/* PIN 을 초기화하면 이 값이 된다. 참가자는 이걸로 들어와서 쓰면 된다.
+   ponytail: 행사 현장에서 진행자가 말로 알려주는 값이라 단순한 게 맞다.
+   외부 공개 행사로 바꿀 거면 무작위 4자리를 만들어 진행자 화면에 띄우는 쪽으로. */
+const 기본PIN = '1234';
+
+/* 빙고에서 쓰는 번호의 끝.
+   판 25칸에는 이 범위에서 고른 서로 다른 25개가 들어가고,
+   프로젝터에서 뽑는 볼도 이 개수만큼 놓인다.
+
+   ★ 이 숫자를 바꾸면 화면과 DB 규칙도 같이 바꿔야 한다.
+     화면: js/app.js 의 빙고최대번호
+     DB:   db/008 의 빙고판_올바른가() 안의 BETWEEN 1 AND 50 */
+const 빙고최대번호 = 50;
+
+/* PIN 형식 검사. 4자리 숫자만 받는다.
+   화면에서도 막지만, 바깥에서 오는 값은 전부 의심하므로 서버가 다시 본다. */
+function PIN_검사(값) {
+  const pin = String(값 ?? '');
+  if (!/^\d{4}$/.test(pin)) throw 사용자오류(400, 'PIN 은 숫자 4자리로 입력해주세요.');
+  return pin;
 }
 
 /* 비밀번호 확인용. Node 에 내장된 scrypt 를 쓰므로 라이브러리가 필요 없다.
@@ -81,6 +135,15 @@ function 비밀번호_맞나(입력, 저장된값) {
   const a = Buffer.from(계산, 'hex');
   const b = Buffer.from(저장된해시, 'hex');
   return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+/* ★ 서버를 켤 때 만들기 → 맞나 가 한 바퀴 도는지 확인한다.
+   이 둘이 어긋나면 아무도 로그인할 수 없게 되는데,
+   행사 당일 현장에서 알게 되면 손쓸 방법이 없다. 켤 때 바로 터지는 게 낫다. */
+if (!비밀번호_맞나(기본PIN, 비밀번호_만들기(기본PIN))
+    || 비밀번호_맞나('9999', 비밀번호_만들기(기본PIN))) {
+  console.error('비밀번호 변환이 고장났습니다. 서버를 시작하지 않습니다.');
+  process.exit(1);
 }
 
 /* 오류를 한 곳에서 처리한다.
@@ -163,36 +226,33 @@ app.get('/api/teams', 감싸기(async (req, res) => {
   res.json(rows);
 }));
 
-/* 참가 등록 */
+/* 참가 등록  ★ 진행측 노트북에서 한다 (참가자 휴대폰이 아니다)
+
+   흐름
+     1. 참가자가 입장하면 진행측이 이 화면에서 팀과 이름을 적는다
+     2. PIN 4자리는 참가자 본인이 직접 눌러 넣는다 (두 번 입력해 오타를 거른다)
+     3. 등록만 하고 끝. 번호표(session_token)는 여기서 만들지 않는다
+     4. 참가자가 자기 휴대폰에서 팀+이름+PIN 으로 로그인할 때 번호표가 발급된다 */
 app.post('/api/join', 감싸기(async (req, res) => {
-  const { teamId, name, sessionToken } = req.body ?? {};
+  const { teamId, name, pin, pinConfirm } = req.body ?? {};
 
   /* 들어온 값을 먼저 검사한다. 바깥에서 오는 값은 전부 의심한다. */
   const 이름 = String(name ?? '').trim();
   if (이름.length < 1 || 이름.length > 20) throw 사용자오류(400, '이름을 1~20자로 입력해주세요.');
   if (!Number.isInteger(teamId)) throw 사용자오류(400, '팀을 선택해주세요.');
-  if (!sessionToken || String(sessionToken).length < 10) throw 사용자오류(400, '잘못된 요청입니다.');
 
-  const 토큰해시 = 해시(sessionToken);
+  const PIN = PIN_검사(pin);
+  /* 두 칸이 다르면 참가자가 누르다 틀린 것이다. 여기서 막지 않으면
+     본인이 기억하는 PIN 과 저장된 PIN 이 달라져 아예 못 들어온다. */
+  if (PIN !== String(pinConfirm ?? '')) throw 사용자오류(400, 'PIN 두 칸이 서로 다릅니다.');
 
   const 참가자 = await 트랜잭션(async (연결) => {
-    /* 이미 등록된 번호표면 그 사람을 그대로 돌려준다. (새로고침 복구) */
-    const 기존 = await 연결.query(
-      `SELECT id, team_id, name, status FROM "goldenbell-participants"
-       WHERE session_token_hash = $1`, [토큰해시]);
-    if (기존.rows[0]) {
-      await 연결.query(
-        `UPDATE "goldenbell-participants" SET last_seen_at = now() WHERE id = $1`,
-        [기존.rows[0].id]);
-      return { ...기존.rows[0], 복구됨: true };
-    }
-
     const 상태 = await 연결.query(`SELECT join_open FROM "goldenbell-game" WHERE id = 1`);
     if (!상태.rows[0].join_open) throw 사용자오류(409, '참가 접수가 마감되었습니다.');
 
     /* ★ 팀 정원 검사 — 줄을 잠그고(FOR UPDATE) 센다.
-       잠그지 않으면 두 사람이 동시에 "9명이네, 들어가도 되겠다" 하고
-       둘 다 들어와서 11명이 된다. */
+       잠그지 않으면 노트북 두 대에서 동시에 "9명이네, 들어가도 되겠다" 하고
+       둘 다 넣어서 11명이 된다. */
     const 팀 = await 연결.query(
       `SELECT id, name, max_members FROM "goldenbell-teams" WHERE id = $1 FOR UPDATE`,
       [teamId]);
@@ -206,10 +266,10 @@ app.post('/api/join', 감싸기(async (req, res) => {
 
     try {
       const 새참가자 = await 연결.query(
-        `INSERT INTO "goldenbell-participants" (team_id, name, session_token_hash)
+        `INSERT INTO "goldenbell-participants" (team_id, name, pin_hash)
          VALUES ($1, $2, $3) RETURNING id, team_id, name, status`,
-        [teamId, 이름, 토큰해시]);
-      return { ...새참가자.rows[0], 복구됨: false };
+        [teamId, 이름, 비밀번호_만들기(PIN)]);
+      return { ...새참가자.rows[0], team_name: 팀.rows[0].name };
     } catch (오류) {
       /* 23505 = UNIQUE 위반. 같은 팀에 같은 이름이 이미 있다는 뜻이다. */
       if (오류.code === '23505') throw 사용자오류(409, '같은 팀에 이미 같은 이름이 있습니다.');
@@ -219,6 +279,48 @@ app.post('/api/join', 감싸기(async (req, res) => {
 
   await 전체알림();      // 참가 인원이 바뀌었으니 프로젝터 화면도 갱신
   res.status(201).json(참가자);
+}));
+
+/* 참가자 로그인  ★ 참가자 휴대폰에서 한다
+
+   팀 + 이름 + PIN 이 모두 맞아야 번호표를 받는다.
+   (이름만으로 찾지 않는 이유: 팀이 다르면 같은 이름이 있을 수 있다.
+    DB의 UNIQUE 도 팀+이름 묶음으로 걸려 있다.)
+
+   번호표를 여기서 처음 발급한다. 한 번 받으면 그 휴대폰에 저장되므로
+   새로고침해도 다시 로그인할 필요가 없다. */
+app.post('/api/login', 감싸기(async (req, res) => {
+  const { teamId, name, pin, sessionToken } = req.body ?? {};
+
+  const 이름 = String(name ?? '').trim();
+  if (!Number.isInteger(teamId) || 이름.length < 1) throw 사용자오류(400, '팀과 이름을 입력해주세요.');
+  if (!sessionToken || String(sessionToken).length < 10) throw 사용자오류(400, '잘못된 요청입니다.');
+
+  const 나 = await 트랜잭션(async (연결) => {
+    /* 줄을 잠그는 이유: 확인과 번호표 발급 사이에 끼어들 틈을 없앤다. */
+    const { rows } = await 연결.query(
+      `SELECT id, name, pin_hash FROM "goldenbell-participants"
+       WHERE team_id = $1 AND name = $2 FOR UPDATE`, [teamId, 이름]);
+    const 사람 = rows[0];
+
+    /* 어느 쪽이 틀렸는지 알려주지 않는다.
+       구분해주면 "이 사람은 등록돼 있다"는 정보를 흘리게 된다. */
+    if (!사람 || !사람.pin_hash || !비밀번호_맞나(String(pin ?? ''), 사람.pin_hash)) {
+      throw 사용자오류(401, '팀 · 이름 · PIN 을 확인해주세요.');
+    }
+
+    /* 번호표를 발급(또는 교체)한다.
+       교체인 경우 = 다른 기기에서 다시 로그인한 것. 앞 기기는 자동으로 풀린다.
+       PIN 을 아는 본인만 할 수 있으므로 이게 맞는 동작이다. */
+    await 연결.query(
+      `UPDATE "goldenbell-participants"
+       SET session_token_hash = $1, last_seen_at = now() WHERE id = $2`,
+      [해시(sessionToken), 사람.id]);
+
+    return { id: 사람.id, name: 사람.name };
+  });
+
+  res.json(나);
 }));
 
 /* 내 정보 + 이번 문제에 낸 답 (새로고침 복구용) */
@@ -242,7 +344,64 @@ app.post('/api/me', 감싸기(async (req, res) => {
     JOIN "goldenbell-game" g ON g.current_question_id = a.question_id
     WHERE a.participant_id = $1 AND g.id = 1`, [나.id]);
 
-  res.json({ me: 나, myAnswer: 내답.rows[0] ?? null });
+  /* 내 빙고판과 내가 만든 줄 수.
+
+     빙고판은 사람마다 다르므로 전체 공개 상태(뷰)에 실을 수 없다.
+     여기서 나에게만 따로 보내준다.
+     줄 수도 DB가 센다 — 휴대폰이 세면 진행자 화면 숫자와 어긋날 수 있다. */
+  const 내판 = await 질의(`
+    SELECT b.cells, 빙고_줄수(b.cells, g.bingo_called) AS lines
+    FROM "goldenbell-bingo-boards" b, "goldenbell-game" g
+    WHERE b.participant_id = $1 AND g.id = 1`, [나.id]);
+
+  res.json({ me: 나, myAnswer: 내답.rows[0] ?? null, myBoard: 내판.rows[0] ?? null });
+}));
+
+/* 빙고판 제출 (참가자가 1~25 를 직접 배치한 결과)
+
+   판을 낼 수 있는 때는 '배치 중(setup)' 단계뿐이다.
+   번호를 부르기 시작한 뒤에 판을 바꿀 수 있으면 아무 의미가 없다. */
+app.post('/api/bingo/board', 감싸기(async (req, res) => {
+  const { sessionToken, cells } = req.body ?? {};
+
+  /* 들어온 값 검사. 바깥에서 오는 값은 전부 의심한다.
+     DB에도 같은 검사(CHECK)가 걸려 있지만, 여기서 걸러야 사람이 읽을 수 있는
+     오류 메시지를 돌려줄 수 있다. */
+  if (!Array.isArray(cells) || cells.length !== 25) {
+    throw 사용자오류(400, '빙고판은 25칸이어야 합니다.');
+  }
+  const 정리된칸 = cells.map(Number);
+  const 종류 = new Set(정리된칸);
+  if (종류.size !== 25
+      || 정리된칸.some((n) => !Number.isInteger(n) || n < 1 || n > 빙고최대번호)) {
+    throw 사용자오류(400, `1부터 ${빙고최대번호} 중에서 겹치지 않는 25개를 넣어주세요.`);
+  }
+
+  await 트랜잭션(async (연결) => {
+    const 상태 = await 연결.query(
+      `SELECT current_game, bingo_phase FROM "goldenbell-game" WHERE id = 1 FOR UPDATE`);
+    const g = 상태.rows[0];
+
+    if (g.current_game !== 'bingo') throw 사용자오류(409, '지금은 빙고 시간이 아닙니다.');
+    if (g.bingo_phase !== 'setup') throw 사용자오류(409, '이미 번호를 부르기 시작해서 판을 낼 수 없습니다.');
+
+    const 나 = await 연결.query(
+      `SELECT id FROM "goldenbell-participants" WHERE session_token_hash = $1`,
+      [해시(sessionToken ?? '')]);
+    if (!나.rows[0]) throw 사용자오류(401, '참가자 정보를 확인할 수 없습니다.');
+
+    /* ON CONFLICT ... DO UPDATE = 이미 판을 냈으면 덮어쓴다.
+       배치 중에는 몇 번이고 고쳐도 되게 한다. */
+    await 연결.query(`
+      INSERT INTO "goldenbell-bingo-boards" (participant_id, cells)
+      VALUES ($1, $2)
+      ON CONFLICT (participant_id)
+      DO UPDATE SET cells = EXCLUDED.cells, submitted_at = now()`,
+      [나.rows[0].id, 정리된칸]);
+  });
+
+  await 전체알림();      // 판 제출 인원이 바뀌었으니 진행자 화면도 갱신
+  res.status(201).json({ ok: true });
 }));
 
 /* 답안 제출 */
@@ -353,20 +512,28 @@ app.post('/api/admin/logout', 감싸기(async (req, res) => {
 app.get('/api/admin/state', 진행자확인, 감싸기(async (req, res) => {
   const 상태 = await 공개상태();
 
+  /* 참가자 한 줄에 퀴즈 답안과 빙고 현황을 같이 싣는다.
+     표가 하나뿐이라 진행자가 볼 곳도 하나다.
+
+     board_lines = 이 사람이 만든 줄 수 (판을 안 냈으면 NULL) */
   const 참가자 = await 질의(`
     SELECT p.id, p.name, p.status, p.team_id, t.name AS team_name,
-           a.id AS answer_id, a.answer, a.grade
+           a.id AS answer_id, a.answer, a.grade,
+           빙고_줄수(b.cells, g.bingo_called) AS board_lines
     FROM "goldenbell-participants" p
     JOIN "goldenbell-teams" t ON t.id = p.team_id
+    CROSS JOIN "goldenbell-game" g
     LEFT JOIN "goldenbell-answers" a
            ON a.participant_id = p.id
-          AND a.question_id = (SELECT current_question_id FROM "goldenbell-game" WHERE id = 1)
+          AND a.question_id = g.current_question_id
+    LEFT JOIN "goldenbell-bingo-boards" b ON b.participant_id = p.id
+    WHERE g.id = 1
     ORDER BY t.sort_order, p.name
   `);
 
   /* 아직 안 낸 문제만 (used_at 이 비어 있는 것) */
   const 남은문제 = await 질의(`
-    SELECT id, question_order, question_text
+    SELECT id, code, question_order, question_text
     FROM "goldenbell-quizz" WHERE used_at IS NULL ORDER BY question_order
   `);
 
@@ -420,7 +587,7 @@ app.get('/api/admin/state', 진행자확인, 감싸기(async (req, res) => {
 const 한번만_누를_버튼 = ['선택및공개', '타이머시작', '마감', '확정', '정답공개'];
 
 app.post('/api/admin/action', 진행자확인, 감싸기(async (req, res) => {
-  const { action, questionId } = req.body ?? {};
+  const { action, questionId, gameType } = req.body ?? {};
 
   await 트랜잭션(async (연결) => {
     /* 게임 줄을 잠근다. 진행자가 두 곳에서 동시에 눌러도 하나씩 처리된다. */
@@ -527,15 +694,66 @@ app.post('/api/admin/action', 진행자확인, 감싸기(async (req, res) => {
       await 연결.query(
         `UPDATE "goldenbell-game" SET phase = 'finished', deadline = NULL WHERE id = 1`);
 
+    } else if (action === '게임선택') {
+      /* ★ 참가자 휴대폰에 무엇을 띄울지 고른다 (퀴즈 / 빙고).
+         퀴즈 진행 상태는 건드리지 않는다. 빙고 하다 돌아와도 있던 자리 그대로다. */
+      if (!['quiz', 'bingo'].includes(gameType)) throw 사용자오류(400, '없는 게임입니다.');
+      await 연결.query(`UPDATE "goldenbell-game" SET current_game = $1 WHERE id = 1`, [gameType]);
+
+    } else if (action === '빙고시작') {
+      if (g.bingo_phase !== 'setup') throw 사용자오류(409, '이미 시작했습니다. 다시 하려면 빙고 초기화를 눌러주세요.');
+
+      const 판수 = await 연결.query(`SELECT count(*)::int AS n FROM "goldenbell-bingo-boards"`);
+      if (판수.rows[0].n === 0) throw 사용자오류(409, '아직 판을 낸 참가자가 없습니다.');
+
+      await 연결.query(`UPDATE "goldenbell-game" SET bingo_phase = 'running' WHERE id = 1`);
+
+    } else if (action === '빙고번호') {
+      if (g.bingo_phase !== 'running') throw 사용자오류(409, '빙고를 먼저 시작해주세요.');
+
+      /* 아직 안 부른 번호 중에서 하나를 뽑는다.
+         SQL 한 줄로도 되지만, 다 불렀을 때를 여기서 걸러야 해서 나눠 적었다.
+         (배열에 NULL 을 이어 붙이면 칸 전체가 NULL 이 되어버린다) */
+      const 남은번호 = [];
+      for (let n = 1; n <= 빙고최대번호; n++) if (!g.bingo_called.includes(n)) 남은번호.push(n);
+      if (남은번호.length === 0) throw 사용자오류(409, `${빙고최대번호}개 번호를 모두 불렀습니다.`);
+
+      const 뽑은번호 = 남은번호[crypto.randomInt(남은번호.length)];
+      await 연결.query(
+        `UPDATE "goldenbell-game" SET bingo_called = bingo_called || $1::int WHERE id = 1`,
+        [뽑은번호]);
+
+    } else if (action === '빙고목표') {
+      /* 몇 줄이면 빙고로 볼지. 인원과 남은 시간에 따라 현장에서 바꾼다. */
+      const 목표 = Number(questionId);          // 콘솔이 숫자를 이 칸에 실어 보낸다
+      if (!Number.isInteger(목표) || 목표 < 1 || 목표 > 12) {
+        throw 사용자오류(400, '목표 줄 수는 1~12 사이여야 합니다.');
+      }
+      await 연결.query(`UPDATE "goldenbell-game" SET bingo_goal = $1 WHERE id = 1`, [목표]);
+
+    } else if (action === '빙고종료') {
+      await 연결.query(`UPDATE "goldenbell-game" SET bingo_phase = 'finished' WHERE id = 1`);
+
+    } else if (action === '빙고초기화') {
+      /* 판과 부른 번호를 전부 지우고 배치 단계로 되돌린다.
+         참가자 계정은 그대로라 다시 판만 채우면 된다. */
+      await 연결.query(`DELETE FROM "goldenbell-bingo-boards"`);
+      await 연결.query(`
+        UPDATE "goldenbell-game"
+        SET bingo_phase = 'setup', bingo_called = '{}'
+        WHERE id = 1`);
+
     } else if (action === '초기화') {
-      /* 참가자와 답안을 지우고 처음 상태로 되돌린다. 문제와 계정은 남긴다. */
+      /* 참가자와 답안을 지우고 처음 상태로 되돌린다. 문제와 계정은 남긴다.
+         참가자를 지우면 빙고판도 같이 지워진다 (007 의 ON DELETE CASCADE). */
       await 연결.query(`DELETE FROM "goldenbell-answers"`);
       await 연결.query(`DELETE FROM "goldenbell-participants"`);
       await 연결.query(`UPDATE "goldenbell-quizz" SET used_at = NULL`);
       await 연결.query(`
         UPDATE "goldenbell-game"
         SET phase = 'waiting', current_question_id = NULL, deadline = NULL,
-            used_actions = '{}', join_open = TRUE
+            used_actions = '{}', join_open = TRUE,
+            current_game = 'quiz', bingo_phase = 'setup', bingo_called = '{}'
         WHERE id = 1`);
 
     } else {
@@ -564,6 +782,29 @@ app.post('/api/admin/grade', 진행자확인, 감싸기(async (req, res) => {
 
   await 전체알림();
   res.json({ ok: true });
+}));
+
+/* PIN 초기화  ★ 참가자가 자기 PIN 을 잊었을 때 진행자가 눌러준다
+
+   기본값(1234)으로 되돌리고, 번호표도 같이 지운다.
+
+   번호표까지 지우는 이유:
+   PIN 을 잊었다는 건 남이 먼저 들어가 있을 수도 있다는 뜻이다.
+   번호표를 남겨두면 그 기기는 계속 접속된 채로 남는다.
+   지우면 새 PIN 으로 다시 로그인한 사람만 들어올 수 있다. */
+app.post('/api/admin/reset-pin', 진행자확인, 감싸기(async (req, res) => {
+  const { participantId } = req.body ?? {};
+  if (!Number.isInteger(participantId)) throw 사용자오류(400, '참가자를 선택해주세요.');
+
+  const { rows } = await 질의(
+    `UPDATE "goldenbell-participants"
+     SET pin_hash = $1, session_token_hash = NULL
+     WHERE id = $2 RETURNING name`,
+    [비밀번호_만들기(기본PIN), participantId]);
+
+  if (!rows[0]) throw 사용자오류(404, '없는 참가자입니다.');
+
+  res.json({ name: rows[0].name, pin: 기본PIN });
 }));
 
 

@@ -54,6 +54,81 @@
 
     <h1>게임 진행</h1>
 
+    <!-- 게임 고르기 -->
+    <section class="패널">
+      <h2>메인 화면에 띄울 게임</h2>
+      <p class="안내">
+        고르는 순간 로그인한 참가자 전원의 휴대폰 화면이 바뀝니다.
+        게임을 오가도 각 게임의 진행 상태는 그대로 남습니다.
+      </p>
+
+      <!-- data-게임 에 적은 값이 서버로 넘어간다.
+           지금 고른 게임은 js/app.js 가 초록 버튼으로 바꿔서 표시한다. -->
+      <div class="진행버튼" style="margin-top:14px">
+        <button class="보조버튼" data-게임="quiz">🔔 골든벨 퀴즈</button>
+        <button class="보조버튼" data-게임="bingo">🎲 빙고</button>
+      </div>
+    </section>
+
+    <!-- 빙고 진행 (빙고를 고르면 js/app.js 가 보이게 한다) -->
+    <section class="패널" id="빙고패널" hidden>
+      <h2>빙고 진행</h2>
+
+      <!-- 빙고를 만든 사람이 생기면 js/app.js 가 여기에 이름을 넣고 보여준다.
+           아무도 없으면 감춰둔다. -->
+      <div class="빙고알림" id="빙고알림" hidden>
+        <strong>🎉 빙고!</strong>
+        <p id="빙고달성자">-</p>
+      </div>
+
+      <div class="요약칸" style="margin:0 0 20px">
+        <div class="요약카드">
+          <span>판을 낸 인원</span>
+          <strong id="빙고판수">0</strong>
+          <p id="빙고단계">배치 중</p>
+        </div>
+        <div class="요약카드">
+          <span>부른 번호</span>
+          <strong id="빙고부른수">0</strong>
+          <p>25개 중</p>
+        </div>
+        <div class="요약카드">
+          <span>빙고 달성</span>
+          <strong id="빙고달성수">0</strong>
+          <p id="빙고목표표시">3줄 기준</p>
+        </div>
+      </div>
+
+      <label for="빙고목표">몇 줄이면 빙고로 볼까요</label>
+      <select id="빙고목표">
+        <!-- js/app.js 가 1~5줄을 채운다 -->
+      </select>
+
+      <!-- 마지막으로 부른 번호를 크게 보여준다.
+           진행자가 이걸 보고 소리 내어 불러준다. -->
+      <div class="현재문제상자" style="align-items:center;display:flex;gap:16px;margin-top:16px">
+        <div style="flex:1">
+          <span class="눈썹" style="margin:0 0 6px">방금 부른 번호</span>
+          <p id="빙고마지막" style="font-size:40px;font-weight:800;margin:0">-</p>
+        </div>
+      </div>
+
+      <p class="안내" id="빙고부른목록" style="margin-top:12px">아직 부른 번호가 없습니다.</p>
+
+      <div class="진행버튼" style="margin-top:18px">
+        <button class="주요버튼" data-작업="빙고시작">배치 마감 · 시작</button>
+        <button class="주요버튼" data-작업="빙고번호">번호 뽑기 🎲</button>
+        <button class="보조버튼" data-작업="빙고종료">빙고 종료</button>
+        <button class="위험버튼" data-작업="빙고초기화">빙고 초기화</button>
+      </div>
+
+      <p class="안내" style="font-size:12px;margin-top:12px">
+        <b>배치 중</b>에는 참가자가 1~25를 자기 판에 직접 놓습니다.
+        <b>배치 마감 · 시작</b>을 누르면 그때부터 판을 못 바꾸고, 번호를 뽑을 수 있습니다.
+        번호는 아직 안 나온 것 중에서 무작위로 하나씩 뽑힙니다.
+      </p>
+    </section>
+
     <!-- 숫자 요약 카드 3개 -->
     <section class="요약칸">
       <div class="요약카드">
@@ -70,13 +145,20 @@
       </div>
     </section>
 
-    <!-- 진행 제어 -->
-    <section class="패널">
+    <!-- 진행 제어 (빙고를 고르면 js/app.js 가 감춘다) -->
+    <section class="패널" id="퀴즈패널">
       <h2>진행 제어</h2>
 
       <!-- 이미 한 번 낸 문제는 js/app.js 가 이 목록에서 빼버린다 -->
       <label for="문제선택">문제 고르기 (남은 문제만 표시)</label>
       <select id="문제선택"><!-- js/app.js 가 채운다 --></select>
+
+      <!-- 고른 문제의 글을 통째로 보여주는 자리.
+
+           select 는 닫혀 있을 때 칸 너비에 맞춰 글을 잘라 보여준다.
+           이건 브라우저가 하는 일이라 css 로 막을 수 없다.
+           그래서 고른 문제를 아래에 한 번 더, 자르지 않고 적어준다. -->
+      <p class="안내" id="고른문제" style="margin:8px 0 0"></p>
 
       <!-- 현재 문제 + 남은 시간을 나란히 둔다.
            진행자도 참가자와 같은 초를 보면서 마감을 누를 수 있다. -->
@@ -145,22 +227,35 @@
         모든 답안을 정답 / 오답 버튼으로 바꿀 수 있습니다.
         자동 채점이 내린 판단은 버튼 색으로 표시됩니다 (초록 = 정답, 빨강 = 오답).<br>
         주관식에서 자동 채점이 판단하지 못한 답은 <b>보류</b>로 남으며,
-        보류가 하나라도 있으면 판정 확정을 누를 수 없습니다.
+        보류가 하나라도 있으면 판정 확정을 누를 수 없습니다.<br>
+        참가자가 PIN 을 잊었다면 맨 오른쪽 <b>PIN 초기화</b>를 눌러주세요.
+        PIN 이 <b>1234</b> 로 돌아가고 그 사람의 접속은 끊깁니다.
+        본인 휴대폰에서 팀 · 이름 · 1234 로 다시 접속하면 됩니다.
       </p>
 
       <!-- 표를 머리(thead)와 몸통(tbody)으로 나눈 이유:
            몸통만 다시 그리면 머리에 있는 팀 선택칸이 초기화되지 않는다.
            통째로 다시 그리면 고르는 도중에 목록이 닫혀버린다. -->
-      <table>
-        <thead id="참가자표머리"><!-- js/app.js 가 한 번만 만든다 --></thead>
-        <tbody id="참가자표"><!-- js/app.js 가 매번 다시 그린다 --></tbody>
-      </table>
+      <!-- 표가 일곱 칸이라 좁은 화면에서는 넘친다.
+           상자로 한 번 감싸고 그 상자만 옆으로 밀리게 한다.
+           표 자체를 줄이면 글자가 겹쳐서 읽을 수가 없다. -->
+      <div class="표상자">
+        <table>
+          <thead id="참가자표머리"><!-- js/app.js 가 한 번만 만든다 --></thead>
+          <tbody id="참가자표"><!-- js/app.js 가 매번 다시 그린다 --></tbody>
+        </table>
+      </div>
     </section>
 
     <!-- 초기화 -->
     <section class="패널">
       <h2>테스트 데이터 초기화</h2>
-      <p class="안내">참가자와 답안을 모두 지우고 처음 상태로 되돌립니다. 되돌릴 수 없습니다.</p>
+      <p class="안내">
+        참가자 · 답안 · 빙고판을 모두 지우고 퀴즈 대기 상태로 되돌립니다. 되돌릴 수 없습니다.<br>
+        <b>참가자 전원이 입구에서 다시 등록해야 합니다.</b>
+        빙고만 다시 하려는 것이라면 빙고 진행 칸의 <b>빙고 초기화</b>를 쓰세요 —
+        그쪽은 판과 부른 번호만 지우고 참가자는 그대로 둡니다.
+      </p>
       <div class="진행버튼">
         <button class="위험버튼" data-작업="초기화">전체 초기화</button>
       </div>
