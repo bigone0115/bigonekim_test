@@ -23,14 +23,8 @@ goldenbell-web2/
 │   ├── db.js           PostgreSQL 연결 (접속 정보는 .env 에만)
 │   └── server.js       Express + API + 실시간 전송
 ├── db/
-│   ├── 001_schema.sql  표 7개 + 안전 뷰 + 버전 트리거
-│   ├── 002_seed.sql    팀 8개
-│   ├── 003_state_view.sql      참가자에게 내보낼 안전한 뷰
-│   ├── 004_elimination_record.sql  탈락 시점 기록
-│   ├── 005_participant_pin.sql     참가자 PIN
-│   ├── 006_questions.sql   ★ 행사 문제와 정답 (저장소에 없음 · 아래 참고)
-│   ├── 007_bingo.sql       게임 고르기 + 빙고
-│   └── 008_bingo_1to50.sql 빙고 번호를 1~50 으로
+│   ├── 001_schema.sql     표 · 함수 · 트리거 · 안전 뷰 · 팀 8개 (전부 지우고 새로 짓는다)
+│   └── 002_questions.sql  ★ 행사 문제와 정답 50개 (저장소에 없음 · 아래 참고)
 └── scripts/
     ├── migrate.mjs     SQL 파일을 번호순으로 실행
     └── create-admin.mjs 진행자 계정 만들기
@@ -65,7 +59,7 @@ js/app.js          상태가 바뀔 때마다 내 정보를 한 번 더 물어�
 
 ## ★ 문제 파일은 저장소에 없다
 
-`db/006_questions.sql` 에 행사 문제 48개와 **정답**이 들어 있다.
+`db/002_questions.sql` 에 행사 문제 50개(본 문제 35 · 예비 13 · 패자부활 2)와 **정답**이 들어 있다.
 이 저장소는 공개이므로 참가자가 미리 볼 수 있어서 `.gitignore` 로 빼두었다.
 
 - 파일은 따로 보관한다

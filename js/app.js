@@ -294,28 +294,18 @@ async function 로그인_받기() {
         '<label for="로그인PIN">PIN 4자리</label>' +
         '<input id="로그인PIN" type="password" inputmode="numeric" maxlength="4" ' +
                'placeholder="숫자 4자리" autocomplete="off">' +
-        '<button class="주요버튼" id="로그인시작">접속</button>' +
+        /* 접속 버튼은 바로 위 PIN 칸과 같은 크기로 맞춘다.
+           높이는 입력칸과 같은 52px, 폭은 css/style.css 의 #로그인시작 규칙이 맞춘다. */
+        '<button class="주요버튼" id="로그인시작" style="min-height:52px">접속</button>' +
         '<p class="오류" id="로그인알림"></p>' +
       '</div>' +
 
-      /* ★ 아직 등록 전인 사람을 위한 길.
-
-         이 화면은 "이미 등록된 사람"만 들어올 수 있다.
-         등록을 안 했으면 무엇을 넣어도 안 들어가지는데,
-         서버는 보안상 그 이유를 알려주지 않는다 (알려주면 명단이 샌다).
-         그래서 길 안내는 화면이 해야 한다.
-
-         작은 글씨로 두면 못 보고 같은 값만 계속 넣게 되므로 버튼으로 올렸다. */
-      '<div style="border-top:1px solid var(--선);margin-top:20px;padding-top:18px">' +
-        '<p class="안내" style="margin:0 0 10px;text-align:center">' +
-          '아직 등록을 안 하셨나요?<br>' +
-          '<b>먼저 등록해야 접속할 수 있습니다.</b>' +
-        '</p>' +
-        '<a class="보조버튼" href="join.html" ' +
-           'style="align-items:center;display:flex;justify-content:center;width:100%">' +
-          '참가 등록하러 가기 →' +
-        '</a>' +
-      '</div>' +
+      /* 등록 화면(join.html)으로 가는 길은 두지 않는다.
+         등록은 진행자 콘솔에서만 연다 (참가자가 스스로 등록하면 안 된다).
+         등록 안 된 사람은 무엇을 넣어도 못 들어오므로, 진행측을 찾으라고만 알려준다. */
+      '<p class="안내" style="margin:16px 0 0;text-align:center">' +
+        '아직 등록 전이라면 입구의 진행측에 먼저 등록해주세요.' +
+      '</p>' +
     '</section>';
 
   const 버튼 = 찾기('#로그인시작');
@@ -380,6 +370,10 @@ async function 게임화면_시작() {
   let 채우는판 = Array(25).fill(null);
 
   let 고른묶음 = 0;         // 지금 열어둔 숫자 묶음 (0 = 1~10)
+  /* Esc 키를 누르면 dialog 는 원래 닫히는데(cancel 사건), 그걸 막는다.
+     빙고 팝업은 진행자가 끝낼 때까지 떠 있어야 한다. */
+  찾기('#빙고팝업').addEventListener('cancel', (사건) => 사건.preventDefault());
+
   let 끄는중 = false;       // 숫자를 끌고 있는 중인가
   let 끌어서옮김 = false;   // 방금 끌어서 놓았나 (놓자마자 지워지는 걸 막는다)
 
@@ -647,6 +641,20 @@ async function 게임화면_시작() {
     const 본문 = 찾기('#본문');
     찾기('#내이름').textContent = `${나.team_name} ${나.name}`;
 
+    /* 문제가 떠 있는 동안만 글자 선택을 막는다 (css 의 .복사금지).
+       classList.toggle(이름, 참거짓) = 참이면 붙이고 거짓이면 뗀다. */
+    document.body.classList.toggle('복사금지', 감시중인가());
+
+    /* ★ 빙고 달성 팝업은 진행자가 빙고를 끝낼 때까지 띄워둔다.
+       조건: 지금 게임이 빙고 + 번호 부르는 중(running) + 내 줄 수가 목표 이상.
+       진행자가 '빙고 종료'(finished)·초기화(setup)·퀴즈 전환을 누르면
+       조건이 깨지므로 그때 닫힌다. 팝업.open = 지금 열려 있나 */
+    const 팝업 = 찾기('#빙고팝업');
+    const 팝업띄울까 = 상태.current_game === 'bingo' && 상태.bingo_phase === 'running' &&
+      !!내판 && (내판.lines ?? 0) >= 상태.bingo_goal;
+    if (팝업띄울까 && !팝업.open) 팝업.showModal();
+    if (!팝업띄울까 && 팝업.open) 팝업.close();
+
     /* ★ 진행자가 고른 게임에 따라 화면을 통째로 갈아 끼운다.
        이 값은 실시간(SSE)으로 오므로 진행자가 누르는 순간 바뀐다. */
     if (상태.current_game === 'bingo') {
@@ -662,8 +670,26 @@ async function 게임화면_시작() {
        화면에서 실수로 보여주려 해도 보여줄 내용 자체가 없다. */
     const 정답있음 = !!상태.correct_answers;
 
-    /* --- 탈락한 경우 (정답은 알려준다) --- */
-    if (나.status === 'eliminated') {
+    /* --- ★ 패자부활전 중인데 이 사람은 도전자가 아닌 경우 ---
+       생존자는 쉬는 차례, 이번 부활전에서 틀린 사람은 부활 실패.
+       도전자('in')는 이 칸을 지나 아래의 평소 문제 화면을 그대로 쓴다. */
+    if (상태.revival && 나.revival_status !== 'in') {
+      const 생존자 = 나.status === 'active';
+      본문.innerHTML =
+        '<section class="카드">' +
+        '<p class="눈썹">REVIVAL</p>' +
+        (생존자
+          ? '<h1>패자부활전 진행 중</h1>' +
+            '<p class="안내">탈락자들이 부활에 도전하고 있습니다. 생존자는 쉬는 차례예요. 잠시 기다려주세요.</p>'
+          : '<h1>아쉽게 부활하지 못했습니다</h1>' +
+            '<p class="안내">화면은 계속 볼 수 있습니다.</p>') +
+        '</section>';
+      return;
+    }
+
+    /* --- 탈락한 경우 (정답은 알려준다) ---
+       패자부활전 도전자는 탈락 상태지만 문제를 풀어야 하므로 여기서 빼준다. */
+    if (나.status === 'eliminated' && !상태.revival) {
       본문.innerHTML =
         '<section class="카드">' +
         '<p class="눈썹">ELIMINATED</p>' +
@@ -725,7 +751,9 @@ async function 게임화면_시작() {
         /* 이 화면에 오는 사람은 아직 탈락하지 않은 생존자다.
            우승자 발표는 '퀴즈 종료' 때 하므로 여기서는 생존 사실만 알린다. */
         html += `<span style="color:#17332e;font-weight:800">정답 · ${정답글자(상태)}</span>` +
-          '<span class="성공">생존하셨습니다</span>';
+          (상태.revival
+            ? '<span class="성공">통과! 끝까지 맞히면 부활합니다</span>'
+            : '<span class="성공">생존하셨습니다</span>');
       } else {
         html += '<span>채점 결과를 기다리는 중입니다.</span>';
       }
@@ -819,15 +847,13 @@ async function 게임화면_시작() {
     if (!새정보) {
       /* 여기 오는 경우 두 가지
            · 진행자가 전체 초기화를 했다  → 참가 기록 자체가 사라졌다
-           · 진행자가 내 PIN 을 초기화했다 → 기록은 남아 있고 PIN 이 1234 가 됐다
+           · 진행자가 내 PIN 을 초기화했다 → 기록은 남아 있고 PIN 이 새 번호로 바뀌었다
 
          화면만 봐서는 둘을 구분할 수 없으므로 두 경우를 다 적어준다.
          이 쪽지를 안 남기면 로그인 칸만 덩그러니 떠서,
          본인은 왜 안 들어가지는지 모른 채 같은 값을 계속 넣게 된다. */
-      /* ★ 기본 PIN(1234)을 여기에 적지 않는다.
-         이 글은 접속이 풀린 사람 누구에게나 보이므로,
-         적어두면 "아무나 1234 로 남의 이름을 시도해보는" 길이 된다.
-         PIN 이 초기화된 사람에게는 진행자가 직접 알려주면 된다. */
+      /* 새 PIN 은 여기에 적지 않는다 (이 화면은 알 수도 없다).
+         진행자 콘솔에만 뜨고, 진행자가 본인에게 직접 알려준다. */
       튕긴이유_적기(
         '진행자가 초기화해서 접속이 풀렸습니다. ' +
         '진행측에 말씀해주세요 — PIN 이 초기화됐는지, 다시 등록해야 하는지 ' +
@@ -840,6 +866,56 @@ async function 게임화면_시작() {
     내답 = 새정보.myAnswer;
     내판 = 새정보.myBoard;      // 줄 수도 서버가 다시 세어 보내준다
   }
+
+  /* 지금 이 사람이 문제를 푸는 차례인가.
+     평소       = 생존자
+     패자부활전 = 도전 중인 탈락자(revival_status = 'in'). 생존자는 쉰다. */
+  function 문제푸는중() {
+    return 상태.revival ? 나.revival_status === 'in' : 나.status === 'active';
+  }
+
+  /* --- ★ 부정행위 방지 ---
+     퀴즈 문제가 떠 있는 동안(문제 공개 ~ 답변 마감)에만 작동한다.
+     빙고, 대기, 채점, 정답 공개 때나 탈락한 뒤에는 아무것도 막지 않는다. */
+  function 감시중인가() {
+    return !!상태 && !!나 && 문제푸는중() &&
+      상태.current_game === 'quiz' && 상태.phase === 'running';   // 문제는 타이머 시작 때 공개된다
+  }
+
+  /* 1) 화면 이탈 감지 — 사건 두 가지를 같이 본다.
+
+     visibilitychange = 탭이 안 보이게 될 때 (다른 탭, 다른 앱, 화면 끄기, 창 최소화)
+     blur / focus     = 이 창에서 손이 떠날 때 / 돌아올 때
+
+     ★ blur 가 필요한 이유: 데스크탑에서 Alt+Tab 으로 다른 프로그램 창에 가면
+       탭은 여전히 '보이는' 상태라 visibilitychange 가 일어나지 않는다.
+       document.hasFocus() = 지금 이 창을 쓰고 있나
+
+     나갔다고 보냈으면 돌아올 때 반드시 '돌아옴'도 보낸다 (콘솔의 '이탈 중' 표시를 풀려고).
+     사건 두 개가 겹쳐 와도 이탈보냄 표시 덕분에 한 번씩만 보낸다. */
+  let 이탈보냄 = false;
+  function 이탈_확인() {
+    const 나가있음 = document.hidden || !document.hasFocus();
+    if (나가있음 && !이탈보냄 && 감시중인가()) {
+      이탈_알리기(true);
+      이탈보냄 = true;
+    } else if (!나가있음 && 이탈보냄) {
+      이탈_알리기(false);
+      이탈보냄 = false;
+    }
+  }
+  document.addEventListener('visibilitychange', 이탈_확인);
+  window.addEventListener('blur', 이탈_확인);
+  window.addEventListener('focus', 이탈_확인);
+
+  /* 2) 복사 · 잘라내기 · 붙여넣기 · 길게 눌러 뜨는 메뉴 막기
+     preventDefault() = 브라우저가 원래 하려던 일을 하지 마라.
+     글자 선택 자체는 css 의 .복사금지 규칙이 막는다 (그리기() 에서 켜고 끈다). */
+  ['copy', 'cut', 'paste', 'contextmenu'].forEach((종류) => {
+    document.addEventListener(종류, (사건) => {
+      if (감시중인가()) 사건.preventDefault();
+    });
+  });
 
   /* --- 시작 --- */
   상태 = await 상태_가져오기();
@@ -1395,9 +1471,28 @@ async function 관리자화면_시작() {
     찾기('#생존수').textContent = 상태.alive_count;
     찾기('#전체수').textContent = 상태.total_count;
     찾기('#제출수').textContent = 상태.submitted_count;
+    /* 주관식이면 앞에 [주관식] 을 붙인다.
+       주관식은 자동 채점이 안 되고 진행자가 직접 판정해야 하므로 미리 알아야 한다.
+       type 값: ox = O/X, choice = 객관식, text = 주관식 */
+    const 주관식표 = (유형) => (유형 === 'text' ? '[주관식] ' : '');
+
     찾기('#현재문제').textContent = 상태.question_id
-      ? `${상태.question_order}번 · ${상태.question_text}`
+      ? `${주관식표(상태.question_type)}${상태.question_order}번 · ${상태.question_text}`
       : '선택된 문제 없음';
+
+    /* 제한 시간 칸. 새 문제가 골라졌을 때만 그 문제의 시간으로 채운다.
+       매번 채우면 진행자가 고치던 숫자가 실시간 갱신 때마다 되돌아간다. */
+    const 시간칸 = 찾기('#제한시간');
+    if (시간칸.dataset.문제 !== String(상태.question_id)) {
+      시간칸.dataset.문제 = String(상태.question_id);
+      시간칸.value = 상태.question_id ? 상태.time_limit : '';
+    }
+
+    /* 주관식 정답 (진행자 판정용). 서버가 주관식일 때만 채워 보낸다.
+       정답이 여러 개면 (책놀이방 / 꿈나무책놀이방) 모두 보여준다. */
+    const 정답칸 = 찾기('#주관식정답');
+    정답칸.hidden = !자료.textAnswers;
+    정답칸.textContent = 자료.textAnswers ? `정답: ${자료.textAnswers.join(' / ')}` : '';
 
     /* --- 문제 고르는 칸 (아직 안 낸 문제만) ---
 
@@ -1429,22 +1524,33 @@ async function 관리자화면_시작() {
                예전에는 24자에서 잘랐는데, 그러면 비슷하게 시작하는 문제를
                목록에서 구분할 수가 없다. 어떤 문제를 내는지 모르고 누르게 된다. */
           const 표 = q.code ?? `${q.question_order}번`;
-          칸.textContent = `${표} · ${q.question_text}`;
+          칸.textContent = `${주관식표(q.type)}${표} · ${q.question_text}`;
           문제선택.appendChild(칸);
         });
       }
       문제선택.dataset.서명 = 서명;
     }
 
-    찾기('label[for="문제선택"]').textContent =
-      `문제 고르기 (남은 문제 ${남은문제.length}개)`;
+    찾기('label[for="문제선택"]').textContent = 상태.revival
+      ? `🔥 패자부활 문제 고르기 (남은 문제 ${남은문제.length}개)`
+      : `문제 고르기 (남은 문제 ${남은문제.length}개)`;
+
+    /* --- 패자부활전 버튼 ---
+       진행 중이면 [종료]만, 아니면 [시작]만 보인다.
+       진행 중에는 도전자가 몇 명 남았는지 적어준다. */
+    찾기('#부활전시작').hidden = 상태.revival;
+    찾기('#부활전종료').hidden = !상태.revival;
+    const 도전중 = 자료.participants.filter((사람) => 사람.revival_status === 'in').length;
+    찾기('#부활전안내').hidden = !상태.revival;
+    찾기('#부활전안내').textContent =
+      `패자부활전 진행 중 · 남은 도전자 ${도전중}명 (생존자는 이번엔 답을 내지 않습니다)`;
 
     /* 고른 문제의 글을 select 아래에 통째로 적어준다.
        한 번 연결해두면 진행자가 고를 때마다 알아서 바뀐다. */
     function 고른문제_보이기() {
       const 고른것 = 남은문제.find((q) => String(q.id) === 문제선택.value);
       찾기('#고른문제').textContent = 고른것
-        ? `${고른것.code ?? 고른것.question_order + '번'} · ${고른것.question_text}`
+        ? `${주관식표(고른것.type)}${고른것.code ?? 고른것.question_order + '번'} · ${고른것.question_text}`
         : '';
     }
     문제선택.onchange = 고른문제_보이기;
@@ -1504,7 +1610,7 @@ async function 관리자화면_시작() {
         '<option value="">전체 팀</option>' +
         자료.teams.map((팀) => `<option value="${팀.id}">${팀.name}</option>`).join('') +
         '</select></th>' +
-        '<th>이름</th><th>상태</th><th>제출한 답</th><th>채점</th><th>빙고</th><th>PIN</th>' +
+        '<th>이름</th><th>상태</th><th>화면 이탈</th><th>제출한 답</th><th>채점</th><th>빙고</th><th>PIN</th>' +
         '</tr>';
 
       /* 고른 값을 바깥 변수에 기억해두고 표를 다시 그린다.
@@ -1566,11 +1672,24 @@ async function 관리자화면_시작() {
         빙고칸 = `<span class="${달성 ? '생존' : ''}">${사람.board_lines}줄${달성 ? ' 빙고!' : ''}</span>`;
       }
 
+      /* 화면 이탈 칸 (부정행위 방지).
+         지금 나가 있으면 빨갛게 '이탈 중', 아니면 지금까지 나간 횟수만 적는다. */
+      const 이탈칸 = 사람.away_now
+        ? `<span class="탈락">🚨 이탈 중 (${사람.away_count}회)</span>`
+        : (사람.away_count > 0 ? `${사람.away_count}회` : '<span class="안내">-</span>');
+
       const 살았나 = 사람.status === 'active';
+
+      /* 상태 칸. 패자부활전 중이면 도전 상태를 먼저 보여준다. */
+      let 상태칸 = `<td class="${살았나 ? '생존' : '탈락'}">${살았나 ? '생존' : '탈락'}</td>`;
+      if (사람.revival_status === 'in')  상태칸 = '<td class="생존">🔥 부활 도전</td>';
+      if (사람.revival_status === 'out') 상태칸 = '<td class="탈락">부활 실패</td>';
+
       표 += '<tr>' +
         `<td>${사람.team_name}</td>` +
         `<td>${사람.name}</td>` +
-        `<td class="${살았나 ? '생존' : '탈락'}">${살았나 ? '생존' : '탈락'}</td>` +
+        상태칸 +
+        `<td>${이탈칸}</td>` +
         `<td>${사람.answer ?? '<span class="안내">미제출</span>'}</td>` +
         `<td>${채점칸}</td>` +
         `<td>${빙고칸}</td>` +
@@ -1579,7 +1698,7 @@ async function 관리자화면_시작() {
     });
 
     if (보여줄사람.length === 0) {
-      표 += '<tr><td colspan="7" class="안내">' +
+      표 += '<tr><td colspan="8" class="안내">' +
         (자료.participants.length === 0
           ? '아직 참가자가 없습니다.'
           : '이 팀에는 참가자가 없습니다.') +
@@ -1606,13 +1725,15 @@ async function 관리자화면_시작() {
     document.querySelectorAll('.PIN초기화').forEach((버튼) => {
       버튼.onclick = async () => {
         알리기('#진행알림', '');
-        if (!confirm('이 참가자의 PIN 을 1234 로 되돌리고 접속을 끊습니다. 계속할까요?')) return;
+        if (!confirm('이 참가자의 PIN 을 새 무작위 네 자리로 바꾸고 접속을 끊습니다. 계속할까요?')) return;
 
         버튼.disabled = true;
         try {
           const 결과 = await 관리자_PIN초기화(Number(버튼.dataset.사람));
-          alert(`${결과.name} 님의 PIN 을 ${결과.pin} 으로 되돌렸습니다.\n` +
-                '본인 휴대폰에서 다시 접속하라고 안내해주세요.');
+          /* 새 PIN 은 이 창에서 한 번만 보인다. 서버에는 원문이 남지 않는다. */
+          alert(`${결과.name} 님의 새 PIN : ${결과.pin}\n\n` +
+                '본인에게만 직접 알려주고, 본인 휴대폰에서 다시 접속하라고 안내해주세요.\n' +
+                '(이 번호는 다시 볼 수 없습니다. 잊으면 한 번 더 초기화하면 됩니다)');
         } catch (오류) {
           알리기('#진행알림', 오류.message);
         }
@@ -1648,10 +1769,17 @@ async function 관리자화면_시작() {
         '그래도 전체 초기화를 할까요?')) return;
       if (작업 === '퀴즈종료' && !confirm('게임을 끝내고 우승자를 발표합니다. 계속할까요?')) return;
       if (작업 === '빙고초기화' && !confirm('모든 빙고판과 부른 번호를 지웁니다. 계속할까요?')) return;
+      if (작업 === '부활전시작' && !confirm(
+        '지금 탈락해 있는 사람 전원이 패자부활전에 도전합니다.\n' +
+        '문제 목록에는 패자부활 문제 2개만 보입니다. 시작할까요?')) return;
+      if (작업 === '부활전종료' && !confirm(
+        '끝까지 맞힌 도전자를 생존자로 되돌리고 패자부활전을 끝냅니다. 계속할까요?')) return;
 
       버튼.disabled = true;
       try {
-        await 관리자_진행(작업, Number(찾기('#문제선택').value) || null);
+        /* 타이머 시작일 때만 제한 시간(초)을 같이 보낸다. */
+        const 초 = 작업 === '타이머시작' ? (Number(찾기('#제한시간').value) || null) : null;
+        await 관리자_진행(작업, Number(찾기('#문제선택').value) || null, undefined, 초);
       } catch (오류) {
         /* 순서가 틀렸거나 이미 누른 버튼이면 서버가 이유를 알려준다. */
         알리기('#진행알림', 오류.message);

@@ -33,6 +33,13 @@
     <!-- 문제와 답안 입력이 통째로 들어가는 자리 -->
     <div id="본문"></div>
 
+    <!-- 빙고 달성 팝업. 평소엔 숨어 있다가 js/app.js 가 showModal() 로 연다.
+         닫기 버튼은 일부러 없다 — 진행자가 빙고를 끝내면 js/app.js 가 닫는다. -->
+    <dialog class="빙고팝업" id="빙고팝업">
+      <strong>빙고!</strong>
+      <p class="안내">축하합니다! 진행자가 빙고를 끝낼 때까지 기다려주세요.</p>
+    </dialog>
+
     <!-- 서버 연결이 끊기면 js/store.js 가 여기에 글을 넣는다 -->
     <p class="안내" id="연결표시" style="font-size:12px;text-align:center;margin-top:18px"></p>
 

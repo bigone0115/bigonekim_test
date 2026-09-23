@@ -201,6 +201,17 @@ function 답_제출하기(답) {
   return 요청('/api/answers', { sessionToken: 번호표_읽기(), answer: 답 });
 }
 
+/* 화면 이탈을 서버에 알린다 (부정행위 방지).
+
+   fetch 대신 sendBeacon 을 쓰는 이유:
+   다른 앱으로 넘어가는 순간 휴대폰은 이 페이지를 멈춘다.
+   fetch 는 그때 중간에 끊길 수 있지만, sendBeacon 은 페이지가 멈춰도 끝까지 보내준다.
+   Blob 에 type 을 적어야 서버가 JSON 으로 읽는다. */
+function 이탈_알리기(이탈함) {
+  const 글 = JSON.stringify({ sessionToken: 번호표_읽기(), away: 이탈함 });
+  navigator.sendBeacon('/api/away', new Blob([글], { type: 'application/json' }));
+}
+
 
 /* ------------------------------------------------------------
    5) 진행자용 기능
@@ -222,8 +233,8 @@ const 관리자_상태 = () => 요청('/api/admin/state');
 
    게임종류는 '게임선택' 버튼에서만 쓴다 ('quiz' 또는 'bingo').
    나머지 버튼은 그 자리를 비워두고 보낸다. */
-const 관리자_진행 = (작업, 문제번호, 게임종류) =>
-  요청('/api/admin/action', { action: 작업, questionId: 문제번호, gameType: 게임종류 });
+const 관리자_진행 = (작업, 문제번호, 게임종류, 초) =>
+  요청('/api/admin/action', { action: 작업, questionId: 문제번호, gameType: 게임종류, seconds: 초 });
 
 /* 수동 판정 */
 const 관리자_판정 = (답번호, 판정) =>

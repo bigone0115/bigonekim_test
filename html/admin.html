@@ -46,6 +46,12 @@
         🖥 프로젝터 열기
       </a>
 
+      <!-- 참가 등록 화면. 진행자 로그인이 있어야만 열린다 (server.js 가 막는다). -->
+      <a class="보조버튼" href="join.html" target="_blank" rel="noopener"
+         style="align-items:center;display:inline-flex;min-height:40px">
+        📝 참가 등록
+      </a>
+
       <button class="보조버튼" id="로그아웃버튼" style="min-height:40px">로그아웃</button>
     </div>
   </header>
@@ -166,6 +172,8 @@
         <div style="flex:1">
           <span class="눈썹" style="margin:0 0 6px">현재 문제</span>
           <p id="현재문제" style="margin:0">-</p>
+          <!-- 주관식 문제일 때만 정답이 보인다 (진행자 판정용). 평소엔 hidden 으로 숨김 -->
+          <p id="주관식정답" hidden style="color:var(--초록);font-weight:800;margin:6px 0 0"></p>
         </div>
         <div class="타이머" id="타이머">-</div>
       </div>
@@ -175,8 +183,19 @@
            아래 다섯 개는 이번 차례에 한 번씩만 누를 수 있다.
            한 번 누르면 회색으로 변하고, '다음' 을 눌러야 다시 살아난다. -->
       <div class="진행버튼">
-        <button class="주요버튼" data-작업="선택및공개">문제 선택 및 공개</button>
-        <button class="주요버튼" data-작업="타이머시작">타이머 시작</button>
+        <!-- 문제 선택은 진행자 콘솔에만 문제를 띄운다.
+             참가자·프로젝터에는 [타이머 시작]을 누르는 순간 공개된다. -->
+        <button class="주요버튼" data-작업="선택및공개">문제 선택</button>
+
+        <!-- 제한 시간(초). 문제를 고르면 그 문제에 적힌 시간이 자동으로 채워지고,
+             바꾸고 싶으면 타이머 시작 전에 숫자를 고치면 된다.
+             type="number" = 숫자만 받는 칸, min/max = 넣을 수 있는 범위 -->
+        <label class="제한시간칸">
+          <input id="제한시간" type="number" min="5" max="300" placeholder="초"
+                 style="min-height:48px;text-align:center;width:84px">
+          <span>초</span>
+        </label>
+        <button class="주요버튼" data-작업="타이머시작">타이머 시작 · 문제 공개</button>
         <button class="보조버튼" data-작업="마감">답변 마감</button>
         <button class="보조버튼" data-작업="확정">판정 확정</button>
         <button class="보조버튼" data-작업="정답공개">정답 공개</button>
@@ -198,6 +217,16 @@
     <!-- 참가자 현황과 수동 채점 -->
     <section class="패널">
       <h2>참가자 현황</h2>
+
+      <!-- 패자부활전. 누르면 지금 탈락해 있는 사람 전원이 도전자가 되고,
+           문제 고르기 목록에 패자부활 문제(R01, R02)만 보인다.
+           두 문제를 다 맞힌 도전자가 [종료] 때 생존자로 돌아온다.
+           둘 중 하나만 보인다 — js/app.js 가 패자부활전 중인지 보고 hidden 을 바꾼다. -->
+      <div class="진행버튼" style="margin-bottom:14px">
+        <button class="주요버튼" data-작업="부활전시작" id="부활전시작">🔥 패자부활전 시작</button>
+        <button class="위험버튼" data-작업="부활전종료" id="부활전종료" hidden>패자부활전 종료 · 부활 반영</button>
+      </div>
+      <p class="안내" id="부활전안내" hidden style="margin:-4px 0 14px"></p>
 
       <!-- 한눈에 보는 대시보드. 숫자는 전부 서버가 세어서 보내준다. -->
       <div class="요약칸" style="margin:0 0 20px">
@@ -229,8 +258,10 @@
         주관식에서 자동 채점이 판단하지 못한 답은 <b>보류</b>로 남으며,
         보류가 하나라도 있으면 판정 확정을 누를 수 없습니다.<br>
         참가자가 PIN 을 잊었다면 맨 오른쪽 <b>PIN 초기화</b>를 눌러주세요.
-        PIN 이 <b>1234</b> 로 돌아가고 그 사람의 접속은 끊깁니다.
-        본인 휴대폰에서 팀 · 이름 · 1234 로 다시 접속하면 됩니다.
+        PIN 이 <b>무작위 네 자리</b>로 바뀌어 알림창에 한 번 뜨고, 그 사람의 접속은 끊깁니다.
+        새 PIN 을 본인에게만 알려주면 본인 휴대폰에서 팀 · 이름 · 새 PIN 으로 다시 접속합니다.<br>
+        한 사람은 기기 한 대로만 접속할 수 있습니다. 휴대폰을 바꾸거나 기록을 지워
+        "이미 다른 기기에서 접속 중"이 뜨는 참가자도 <b>PIN 초기화</b>로 풀어주면 됩니다.
       </p>
 
       <!-- 표를 머리(thead)와 몸통(tbody)으로 나눈 이유:

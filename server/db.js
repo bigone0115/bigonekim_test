@@ -89,7 +89,21 @@ export async function 트랜잭션(할일) {
 
 /* 참가자·프로젝터에게 보낼 안전한 상태 한 덩어리.
    정답 차단은 이 뷰(SQL) 안에서 처리되므로 여기서 따로 거를 필요가 없다. */
-export async function 공개상태() {
+/* ★ 진행자용 = true 면 가리지 않고 그대로 준다 (진행자 콘솔 전용).
+
+   문제를 고르기만 한 단계(published)에서는 참가자·프로젝터에게 문제를 숨긴다.
+   진행자가 [타이머 시작]을 누르는 순간(running) 비로소 공개된다.
+   문제 칸을 전부 비우면 참가자·프로젝터 화면은 "문제가 없다"고 보고
+   원래 있던 대기 화면(다음 문제가 곧 공개됩니다)을 그대로 띄운다. */
+export async function 공개상태(진행자용 = false) {
   const { rows } = await 질의('SELECT * FROM "goldenbell-public-state"');
-  return rows[0];
+
+  const 상태 = rows[0];
+  if (!진행자용 && 상태.phase === 'published') {
+    for (const 칸 of ['question_id', 'question_order', 'question_type',
+                      'question_text', 'choices', 'time_limit']) {
+      상태[칸] = null;
+    }
+  }
+  return 상태;
 }

@@ -931,6 +931,10 @@ td button {
   .입력묶음 > p,
   .입력묶음 > a { grid-column: 1 / -1; }
 
+  /* 단, 참가자 접속 버튼은 입력칸과 같은 오른쪽 칸에만 둔다.
+     그래야 바로 위 PIN 칸과 폭이 똑같아진다. */
+  .입력묶음 > #로그인시작 { grid-column: 2; }
+
   /* 빙고판은 넓다고 따라 커지면 안 된다.
      한 칸이 200px 이 되면 판 전체가 화면 밖으로 나간다. */
   .빙고판, .빙고숫자, .빙고묶음 {
@@ -956,7 +960,12 @@ td button {
     align-items: start;
     gap: 34px;
     grid-template-columns: 1.05fr 1fr;
-    margin-top: 10px;
+
+    /* 정가운데는 눈으로 보면 아래로 처져 보여서 살짝 위로 올린다.
+       position: relative + top 음수 = 제자리에서 그만큼 위로 옮긴다.
+       10vh = 화면 높이의 10%. 더 올리려면 숫자를 키운다. */
+    position: relative;
+    top: -10vh;
   }
 
   .등록안내 { padding-top: 26px; }
@@ -1003,7 +1012,12 @@ td button {
   display: grid;
   gap: 6px;
   grid-template-columns: repeat(5, 1fr);
-  margin: 16px 0;
+
+  /* 위아래 16px, 좌우 auto.
+     ★ 좌우를 0 으로 두면 위쪽 데스크탑 규칙(margin-left/right: auto)을
+     이 줄이 덮어써서 판이 왼쪽으로 쏠린다 (파일 아래쪽 규칙이 이긴다).
+     auto = 남는 자리를 양쪽에 똑같이 나눠 준다 = 가운데. */
+  margin: 16px auto;
 }
 
 /* aspect-ratio: 1 은 "가로세로 비율을 1:1로" = 정사각형.
@@ -1222,6 +1236,12 @@ td button {
 .등록판 {
   display: grid;
   gap: 18px;
+
+  /* 등록판을 화면 세로 한가운데에 둔다.
+     바깥 .모바일 은 세로로 쌓는 flex 상자이고 높이가 화면 전체(100vh)다.
+     그 안에서 위아래 여백을 auto 로 두면, 머리글 아래 남는 자리를
+     위아래로 똑같이 나눠 가져서 가운데에 온다. */
+  margin: auto 0;
 }
 
 .등록안내 { padding-top: 18px; }
@@ -1415,4 +1435,64 @@ td button {
    운영체제에서 "동작 줄이기"를 켠 사람에게는 애니메이션을 끈다. */
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
+}
+
+
+/* ------------------------------------------------------------
+   빙고 달성 팝업 (play.html)
+   <dialog> 는 브라우저에 들어 있는 팝업 상자다.
+   showModal() 로 열면 뒤 화면을 어둡게 가리고, Esc 키로도 닫힌다.
+   ::backdrop = 팝업 뒤를 덮는 어두운 막
+   ------------------------------------------------------------ */
+.빙고팝업 {
+  animation: 팝업등장 0.25s ease-out;
+  border: none;
+  border-radius: 20px;
+  max-width: 320px;
+  padding: 32px 24px 24px;
+  text-align: center;
+  width: calc(100% - 32px);
+}
+
+.빙고팝업::backdrop { background: rgba(16, 63, 53, 0.7); }
+
+.빙고팝업 strong {
+  color: var(--초록);
+  display: block;
+  font-size: 48px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.빙고팝업 p { margin: 8px 0 0; }
+
+
+/* ------------------------------------------------------------
+   부정행위 방지 — 문제가 떠 있는 동안 글자 선택 막기 (play.html)
+   js/app.js 가 문제 공개 ~ 답변 마감 동안만 body 에 .복사금지 를 붙인다.
+   user-select: none      = 글자를 끌어서 고를 수 없게
+   -webkit-touch-callout  = 아이폰에서 길게 누르면 뜨는 메뉴(복사·검색) 끄기
+   ------------------------------------------------------------ */
+.복사금지 {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 단, 주관식 입력칸은 글자를 쳐야 하므로 풀어준다.
+   (아이폰은 입력칸까지 막으면 글자 입력이 안 된다) */
+.복사금지 input {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+
+/* 진행자 콘솔 — 타이머 버튼 옆 제한 시간(초) 칸.
+   label 로 감싸서 '초' 글자를 눌러도 칸이 선택된다. */
+.제한시간칸 {
+  align-items: center;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 6px;
+  margin: 0;
 }

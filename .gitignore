@@ -4,4 +4,4 @@ node_modules/
 # 행사 문제와 정답.
 # 저장소가 공개라 올리면 참가자가 미리 볼 수 있다.
 # 이 파일은 따로 보관하고, 배포할 때 서버에 직접 올려서 migrate 한다.
-db/006_questions.sql
+db/002_questions.sql
